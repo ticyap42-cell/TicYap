@@ -9,7 +9,11 @@ import kategoriler as kat
 # PostgreSQL bağlantısı (Render'da DATABASE_URL çevre değişkeni kullanılır)
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-if DATABASE_URL:
+# PostgreSQL henüz kurulmadığı için JSON kullanıyoruz
+# PostgreSQL kurulumu yapıldıktan sonra burayı True yapabilirsiniz
+USE_POSTGRES = False
+
+if USE_POSTGRES and DATABASE_URL:
     import psycopg2
     from psycopg2 import sql
     import urllib.parse
@@ -23,11 +27,9 @@ if DATABASE_URL:
         "host": parsed.hostname,
         "port": parsed.port or 5432,
     }
-    USE_POSTGRES = True
 else:
     # Yerel geliştirme için JSON dosyası
     DOSYA_YOLU = os.path.join(os.path.dirname(__file__), "oyuncular.json")
-    USE_POSTGRES = False
 
 ADMIN_KULLANICI = "TicYapAdmin"
 ADMIN_SIFRE = "admin2026"
@@ -461,7 +463,10 @@ def kayit_ol(kullanici_adi, sifre):
         return False, "Şifre en az 4 karakter olmalı."
 
     oyuncu_olustur(kullanici_adi, sifre)
-    return True, f"Hesabın oluşturuldu! {oyuncu_getir(kullanici_adi)['bakiye']} TL ile başladın."
+    yeni_oyuncu = oyuncu_getir(kullanici_adi)
+    if yeni_oyuncu is None:
+        return False, "Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin."
+    return True, f"Hesabın oluşturuldu! {yeni_oyuncu['bakiye']} TL ile başladın."
 
 
 def giris_yap(kullanici_adi, sifre):
