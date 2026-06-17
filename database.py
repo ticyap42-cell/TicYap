@@ -9,9 +9,8 @@ import kategoriler as kat
 # PostgreSQL bağlantısı (Render'da DATABASE_URL çevre değişkeni kullanılır)
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# PostgreSQL henüz kurulmadığı için JSON kullanıyoruz
-# PostgreSQL kurulumu yapıldıktan sonra burayı True yapabilirsiniz
-USE_POSTGRES = False
+# PostgreSQL aktif - Render'da kalıcı depolama için
+USE_POSTGRES = True
 
 if USE_POSTGRES and DATABASE_URL:
     import psycopg2
