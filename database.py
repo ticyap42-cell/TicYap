@@ -1250,3 +1250,40 @@ def tesis_urun_topla(kullanici_adi, tesis_alani):
     verileri_kaydet(veriler)
 
     return True, f"{bekleyen_miktar} ürün envantere eklendi!", oyuncu
+
+
+def oyuncu_sil(admin_kullanici_adi, hedef_kullanici_adi):
+    """Admin tarafından oyuncu siler"""
+    veriler = verileri_yukle()
+    admin = veriler["oyuncular"].get(admin_kullanici_adi)
+    if admin is None or not admin_mi(admin):
+        return False, "Admin yetkiniz yok."
+
+    if hedef_kullanici_adi not in veriler["oyuncular"]:
+        return False, "Oyuncu bulunamadı."
+
+    if hedef_kullanici_adi == ADMIN_KULLANICI:
+        return False, "Admin hesabı silinemez."
+
+    del veriler["oyuncular"][hedef_kullanici_adi]
+    verileri_kaydet(veriler)
+
+    return True, f"{hedef_kullanici_adi} silindi."
+
+
+def oyuncu_bakiye_ayarla(admin_kullanici_adi, hedef_kullanici_adi, yeni_bakiye):
+    """Admin tarafından oyuncu bakiyesini ayarlar"""
+    veriler = verileri_yukle()
+    admin = veriler["oyuncular"].get(admin_kullanici_adi)
+    if admin is None or not admin_mi(admin):
+        return False, "Admin yetkiniz yok."
+
+    hedef = veriler["oyuncular"].get(hedef_kullanici_adi)
+    if hedef is None:
+        return False, "Oyuncu bulunamadı."
+
+    hedef["bakiye"] = yeni_bakiye
+    veriler["oyuncular"][hedef_kullanici_adi] = hedef
+    verileri_kaydet(veriler)
+
+    return True, f"{hedef_kullanici_adi} bakiyesi {yeni_bakiye} TL olarak ayarlandı."

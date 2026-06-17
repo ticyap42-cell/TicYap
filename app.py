@@ -470,6 +470,67 @@ def tesis_urun_topla():
     return islem_cevabi(basarili, mesaj, oyuncu)
 
 
+@app.route("/admin", methods=["GET"])
+def admin_panel():
+    if not giris_yapilmis_mi():
+        return redirect(url_for("ana_sayfa", hata="Önce giriş yapmalısın."))
+
+    oyuncu = aktif_oyuncu()
+    if not db.admin_mi(oyuncu):
+        return redirect(url_for("ana_sayfa", hata="Admin yetkiniz yok."))
+
+    veriler = db.verileri_yukle()
+    tum_oyuncular = list(veriler["oyuncular"].values())
+
+    return render_template(
+        "admin.html",
+        oyuncu=oyuncu,
+        tum_oyuncular=tum_oyuncular,
+        urun_adlari=db.URUN_ADLARI,
+    )
+
+
+@app.route("/admin/oyuncu-sil", methods=["POST"])
+def admin_oyuncu_sil():
+    if not giris_yapilmis_mi():
+        return islem_cevabi(False, "Önce giriş yapmalısın.")
+
+    oyuncu = aktif_oyuncu()
+    if not db.admin_mi(oyuncu):
+        return islem_cevabi(False, "Admin yetkiniz yok.")
+
+    hedef_kullanici = request.form.get("kullanici_adi", "")
+    if not hedef_kullanici:
+        return islem_cevabi(False, "Geçersiz kullanıcı adı.")
+
+    basarili, mesaj = db.oyuncu_sil(session["kullanici_adi"], hedef_kullanici)
+    return islem_cevabi(basarili, mesaj)
+
+
+@app.route("/admin/oyuncu-bakiye-ayarla", methods=["POST"])
+def admin_oyuncu_bakiye_ayarla():
+    if not giris_yapilmis_mi():
+        return islem_cevabi(False, "Önce giriş yapmalısın.")
+
+    oyuncu = aktif_oyuncu()
+    if not db.admin_mi(oyuncu):
+        return islem_cevabi(False, "Admin yetkiniz yok.")
+
+    hedef_kullanici = request.form.get("kullanici_adi", "")
+    yeni_bakiye = request.form.get("yeni_bakiye", "0")
+
+    if not hedef_kullanici:
+        return islem_cevabi(False, "Geçersiz kullanıcı adı.")
+
+    try:
+        yeni_bakiye = int(yeni_bakiye)
+    except ValueError:
+        return islem_cevabi(False, "Geçersiz bakiye değeri.")
+
+    basarili, mesaj = db.oyuncu_bakiye_ayarla(session["kullanici_adi"], hedef_kullanici, yeni_bakiye)
+    return islem_cevabi(basarili, mesaj)
+
+
 if __name__ == "__main__":
     db.admin_hesabi_hazirla()
     port = int(os.environ.get("PORT", 5000))

@@ -435,6 +435,13 @@
                             <i class="bi bi-building"></i>
                             <span id="ust-tesis-sayisi">{{ oyuncu.mulkler.values()|sum }}</span> Tesis
                         </div>
+                        {% if oyuncu.is_admin %}
+                        <div class="stat-item">
+                            <a href="{{ url_for('admin_panel') }}" class="btn btn-sm btn-warning">
+                                <i class="bi bi-shield-lock"></i> Admin Panel
+                            </a>
+                        </div>
+                        {% endif %}
                         <div class="stat-item">
                             <i class="bi bi-graph-up"></i>
                             <span id="ust-dakika-degeri">{{ oyuncu.dakika_degeri }} TL/dk</span>
@@ -1498,12 +1505,12 @@
                     container.innerHTML = data.mesajlar.map(mesaj => {
                         const zaman = new Date(mesaj.zaman).toLocaleTimeString('tr-TR');
                         return `
-                            <div class="chat-message mb-2 p-2 rounded" style="background: rgba(255,255,255,0.1);">
+                            <div class="chat-message mb-2 p-2 rounded" style="background: rgba(255,255,255,0.9); color: #000;">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <strong class="text-warning">${mesaj.gonderen}</strong>
+                                    <strong class="text-dark">${mesaj.gonderen}</strong>
                                     <small class="text-muted">${zaman}</small>
                                 </div>
-                                <p class="mb-0 text-white">${mesaj.mesaj}</p>
+                                <p class="mb-0 text-dark">${mesaj.mesaj}</p>
                             </div>
                         `;
                     }).join('');
