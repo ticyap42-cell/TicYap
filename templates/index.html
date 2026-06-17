@@ -819,7 +819,7 @@
                                                 · Kapasite: {{ fabrikalar[arazi.fabrika].kapasite }}
                                                 · Saatlik: {{ fabrikalar[arazi.fabrika].saatlik_uretim }}
                                             </small>
-                                            {% set durum = oyuncu.fabrika_uretim_durumu.get(str(arazi.id), {}) %}
+                                            {% set durum = oyuncu.fabrika_uretim_durumu.get(arazi.id|string, {}) %}
                                             {% set bekleyen = durum.get('bekleyen_miktar', 0) %}
                                             {% set baslatildi = durum.get('baslatildi', False) %}
                                             <div class="d-flex gap-2 align-items-center mt-2">
