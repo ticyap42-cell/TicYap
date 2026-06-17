@@ -9,8 +9,8 @@ import kategoriler as kat
 # PostgreSQL bağlantısı (Render'da DATABASE_URL çevre değişkeni kullanılır)
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# PostgreSQL geçici olarak devre dışı - bağlantı sorunu var
-USE_POSTGRES = False
+# PostgreSQL aktif - DATABASE_URL varsa kullan
+USE_POSTGRES = bool(DATABASE_URL)
 
 if USE_POSTGRES and DATABASE_URL:
     import psycopg2
@@ -124,6 +124,7 @@ def _postgres_tablo_olustur():
     """PostgreSQL tablolarını oluştur"""
     conn = _postgres_baglan()
     if not conn:
+        print("PostgreSQL bağlantısı başarısız, tablo oluşturulamıyor")
         return False
 
     try:
@@ -152,6 +153,7 @@ def _postgres_tablo_olustur():
                     tesis_uretim_durumu JSONB DEFAULT '{}'
                 )
             """)
+            print("PostgreSQL tabloları başarıyla oluşturuldu")
         return True
     except Exception as e:
         print(f"Tablo oluşturma hatası: {e}")
@@ -396,11 +398,22 @@ def _veri_normalize(veriler):
 def verileri_yukle():
     if USE_POSTGRES:
         # PostgreSQL kullan
-        _postgres_tablo_olustur()
+        print("PostgreSQL modunda veri yükleniyor...")
+        if not _postgres_tablo_olustur():
+            print("PostgreSQL tablo oluşturma başarısız, JSON'a düşülüyor")
+            # Fallback to JSON
+            if not os.path.exists(DOSYA_YOLU):
+                bos = {"oyuncular": {}, "pazar": []}
+                verileri_kaydet(bos)
+                return bos
+            with open(DOSYA_YOLU, "r", encoding="utf-8") as dosya:
+                return _veri_normalize(json.load(dosya))
         oyuncular = _postgres_tum_oyuncular()
+        print(f"PostgreSQL'den {len(oyuncular)} oyuncu yüklendi")
         return {"oyuncular": oyuncular, "pazar": [], "klupler": [], "chat_mesajlari": []}
     else:
         # JSON dosyası kullan
+        print("JSON modunda veri yükleniyor...")
         if not os.path.exists(DOSYA_YOLU):
             bos = {"oyuncular": {}, "pazar": []}
             verileri_kaydet(bos)
@@ -413,6 +426,7 @@ def verileri_yukle():
 def verileri_kaydet(veriler):
     if USE_POSTGRES:
         # PostgreSQL kullan - sadece oyuncuları güncelle
+        print("PostgreSQL modunda veri kaydediliyor...")
         for kullanici_adi, oyuncu in veriler["oyuncular"].items():
             # Önce oyuncu var mı kontrol et
             conn = _postgres_baglan()
@@ -428,8 +442,11 @@ def verileri_kaydet(veriler):
                             _postgres_oyuncu_ekle(oyuncu)
                 finally:
                     conn.close()
+            else:
+                print(f"PostgreSQL bağlantı hatası, {kullanici_adi} kaydedilemedi")
     else:
         # JSON dosyası kullan
+        print("JSON modunda veri kaydediliyor...")
         with open(DOSYA_YOLU, "w", encoding="utf-8") as dosya:
             json.dump(veriler, dosya, ensure_ascii=False, indent=2)
 
@@ -494,6 +511,11 @@ def giris_yap(kullanici_adi, sifre):
 
 
 def admin_hesabi_hazirla():
+    # PostgreSQL tablolarını oluştur
+    if USE_POSTGRES:
+        print("PostgreSQL tabloları oluşturuluyor...")
+        _postgres_tablo_olustur()
+
     if oyuncu_var_mi(ADMIN_KULLANICI):
         oyuncu = oyuncu_getir(ADMIN_KULLANICI)
     else:
@@ -503,6 +525,7 @@ def admin_hesabi_hazirla():
     oyuncu["bakiye"] = ADMIN_BAKIYE
     oyuncu["sifre_hash"] = generate_password_hash(ADMIN_SIFRE)
     oyuncu_kaydet(oyuncu)
+    print(f"Admin hesabı hazırlandı: {ADMIN_KULLANICI}")
     return oyuncu
 
 
