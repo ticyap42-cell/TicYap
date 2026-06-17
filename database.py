@@ -6,7 +6,11 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 import kategoriler as kat
 
-DOSYA_YOLU = os.path.join(os.path.dirname(__file__), "oyuncular.json")
+# Render'da kalıcı depolama için /opt/render/project/src kullan
+if os.path.exists("/opt/render/project/src"):
+    DOSYA_YOLU = "/opt/render/project/src/oyuncular.json"
+else:
+    DOSYA_YOLU = os.path.join(os.path.dirname(__file__), "oyuncular.json")
 
 ADMIN_KULLANICI = "TicYapAdmin"
 ADMIN_SIFRE = "admin2026"
