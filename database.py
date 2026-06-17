@@ -28,8 +28,12 @@ if USE_POSTGRES and DATABASE_URL:
         "port": parsed.port or 5432,
     }
 else:
-    # Yerel geliştirme için JSON dosyası
-    DOSYA_YOLU = os.path.join(os.path.dirname(__file__), "oyuncular.json")
+    # Render'da kalıcı depolama için /opt/render/project/src kullan
+    # Eğer bu yol yoksa, yerel geliştirme için proje dizinini kullan
+    if os.path.exists("/opt/render/project/src"):
+        DOSYA_YOLU = "/opt/render/project/src/oyuncular.json"
+    else:
+        DOSYA_YOLU = os.path.join(os.path.dirname(__file__), "oyuncular.json")
 
 ADMIN_KULLANICI = "TicYapAdmin"
 ADMIN_SIFRE = "admin2026"
