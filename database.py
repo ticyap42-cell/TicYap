@@ -71,12 +71,15 @@ def _varsayilan_oyuncu(kullanici_adi):
         "araziler": [],
         "enerji": _varsayilan_enerji(),
         "urunler": {urun: 0 for urun in GECERLI_URUNLER},
+        "bekleyen_urunler": {urun: 0 for urun in GECERLI_URUNLER},  # Toplanmayı bekleyen ürünler
         "son_uretim": _simdi().isoformat(),
         "sifre_hash": "",
         "is_admin": False,
         "seviye": 1,  # Genel oyuncu seviyesi
         "seviye_puani": 0,  # Seviye atlamak için gereken puan
         "klup": None,  # Üye olduğu klüp
+        "fabrika_uretim_durumu": {},  # Fabrika üretim durumu (arazi_id -> {baslatildi: bool, baslama_zamani: str, bekleyen_miktar: int})
+        "tesis_uretim_durumu": {},  # Tüm tesisler için üretim durumu (tesis_alani -> {baslatildi: bool, baslama_zamani: str, bekleyen_miktar: int})
     }
 
 
@@ -124,6 +127,11 @@ def _oyuncu_normalize(oyuncu):
     for urun in GECERLI_URUNLER:
         urunler.setdefault(urun, 0)
 
+    # Bekleyen ürünleri normalize et
+    bekleyen_urunler = oyuncu.setdefault("bekleyen_urunler", {})
+    for urun in GECERLI_URUNLER:
+        bekleyen_urunler.setdefault(urun, 0)
+
     if "demir_ocagi_sayisi" not in oyuncu:
         oyuncu["demir_ocagi_sayisi"] = oyuncu.pop("fabrika_sayisi", 0)
 
@@ -135,13 +143,36 @@ def _oyuncu_normalize(oyuncu):
     oyuncu.setdefault("is_admin", False)
     oyuncu.setdefault("seviye", 1)
     oyuncu.setdefault("seviye_puani", 0)
+    oyuncu.setdefault("fabrika_uretim_durumu", {})
+    oyuncu.setdefault("tesis_uretim_durumu", {})
     _legacy_mulk_aktar(oyuncu)
-    
+
     # Tesis seviyelerini normalize et
     mulkler = oyuncu.setdefault("mulkler", _varsayilan_mulkler())
     for alan in kat.tum_mulk_alanlari():
         mulkler.setdefault(f"{alan}_seviye", 1)
-    
+
+    # Fabrika üretim durumunu normalize et
+    for arazi in oyuncu.get("araziler", []):
+        arazi_id = arazi.get("id")
+        if arazi_id and arazi.get("fabrika"):
+            durum = oyuncu["fabrika_uretim_durumu"].setdefault(str(arazi_id), {
+                "baslatildi": False,
+                "baslama_zamani": None,
+                "bekleyen_miktar": 0
+            })
+
+    # Tüm tesisler için üretim durumunu normalize et
+    for kategori in kat.KATEGORILER.values():
+        for anahtar, oge in kategori["ogeler"].items():
+            tesis_alani = oge["alan"]
+            if oyuncu["mulkler"].get(tesis_alani, 0) > 0:
+                durum = oyuncu["tesis_uretim_durumu"].setdefault(tesis_alani, {
+                    "baslatildi": False,
+                    "baslama_zamani": None,
+                    "bekleyen_miktar": 0
+                })
+
     return admin_bakiye_uygula(oyuncu)
 
 
@@ -275,18 +306,29 @@ def _cikti_ekle(oyuncu, cikti):
 
 def _pasif_mulk_uretim(oyuncu, dakika):
     uretim_yapildi = False
-    for _ in range(dakika):
-        for kategori in kat.KATEGORILER.values():
-            for oge in kategori["ogeler"].values():
-                adet = oyuncu["mulkler"].get(oge["alan"], 0)
-                if adet <= 0:
-                    continue
+    for kategori in kat.KATEGORILER.values():
+        for oge in kategori["ogeler"].values():
+            adet = oyuncu["mulkler"].get(oge["alan"], 0)
+            if adet <= 0:
+                continue
 
-                # Seviye çarpanını hesapla
-                seviye = oyuncu["mulkler"].get(f"{oge['alan']}_seviye", 1)
-                uretim_carpani = kat.SEVIYE_SISTEMI["uretim_carpani"]
-                seviye_bonusu = 1 + (seviye - 1) * uretim_carpani
+            # Üretim durumu kontrolü
+            durum = oyuncu["tesis_uretim_durumu"].get(oge["alan"], {})
+            if not durum.get("baslatildi", False):
+                continue
 
+            # Kapasite kontrolü
+            kapasite = oge.get("kapasite", 0)
+            bekleyen = durum.get("bekleyen_miktar", 0)
+            if bekleyen >= kapasite:
+                continue  # Kapasite dolu, üretim durduruldu
+
+            # Seviye çarpanını hesapla
+            seviye = oyuncu["mulkler"].get(f"{oge['alan']}_seviye", 1)
+            uretim_carpani = kat.SEVIYE_SISTEMI["uretim_carpani"]
+            seviye_bonusu = 1 + (seviye - 1) * uretim_carpani
+
+            for _ in range(dakika):
                 girdi_ihtiyac = oge.get("girdi_tuketim")
                 if girdi_ihtiyac:
                     olcekli = {u: int(m * adet * seviye_bonusu) for u, m in girdi_ihtiyac.items()}
@@ -308,34 +350,69 @@ def _pasif_mulk_uretim(oyuncu, dakika):
                     temel = int(adet * miktar * seviye_bonusu)
                     if carpan > 1:
                         temel += int(temel * (carpan - 1))
-                    oyuncu["urunler"][urun] += temel
+                    # Ürünleri bekleyen ürünlere ekle (doğrudan envantere değil)
+                    oyuncu["bekleyen_urunler"][urun] += temel
+                    durum["bekleyen_miktar"] = durum.get("bekleyen_miktar", 0) + temel
                 for tur, miktar in oge.get("enerji_uretim", {}).items():
                     _enerji_ekle(oyuncu, tur, int(adet * miktar * seviye_bonusu))
-                
+
                 uretim_yapildi = True
+
+                # Kapasite kontrolü
+                if durum.get("bekleyen_miktar", 0) >= kapasite:
+                    break
+
+            oyuncu["tesis_uretim_durumu"][oge["alan"]] = durum
 
     oyuncu["urunler"]["bugday"] += oyuncu.get("ciftlik_sayisi", 0) * dakika
     oyuncu["urunler"]["demir"] += oyuncu.get("demir_ocagi_sayisi", 0) * dakika
-    
+
     # Üretim yapıldıysa XP kazan
     if uretim_yapildi:
         xp_kazan(oyuncu, "uretim_yap")
 
 
 def _fabrika_uretim(oyuncu, dakika):
-    for _ in range(dakika):
-        for arazi in oyuncu.get("araziler", []):
-            tip = arazi.get("fabrika")
-            if not tip or tip not in kat.FABRIKA_TANIMLARI:
-                continue
-            fab = kat.FABRIKA_TANIMLARI[tip]
+    for arazi in oyuncu.get("araziler", []):
+        arazi_id = str(arazi.get("id"))
+        tip = arazi.get("fabrika")
+        if not tip or tip not in kat.FABRIKA_TANIMLARI:
+            continue
+
+        fab = kat.FABRIKA_TANIMLARI[tip]
+        durum = oyuncu["fabrika_uretim_durumu"].get(arazi_id, {})
+
+        # Üretim başlatılmadıysa atla
+        if not durum.get("baslatildi", False):
+            continue
+
+        # Kapasite kontrolü
+        saatlik_uretim = fab.get("saatlik_uretim", 0)
+        kapasite = fab.get("kapasite", 0)
+        bekleyen = durum.get("bekleyen_miktar", 0)
+
+        if bekleyen >= kapasite:
+            continue  # Kapasite dolu, üretim durduruldu
+
+        for _ in range(dakika):
             if not _enerji_yeterli(oyuncu, fab["enerji_tuketim"]):
                 continue
             if not _girdi_yeterli(oyuncu, fab["girdi"]):
                 continue
+
             _enerji_tuket(oyuncu, fab["enerji_tuketim"])
             _girdi_tuket(oyuncu, fab["girdi"])
-            _cikti_ekle(oyuncu, fab["cikti"])
+
+            # Ürünleri bekleyen ürünlere ekle (doğrudan envantere değil)
+            for urun, miktar in fab["cikti"].items():
+                oyuncu["bekleyen_urunler"][urun] += miktar
+                durum["bekleyen_miktar"] = durum.get("bekleyen_miktar", 0) + miktar
+
+            # Kapasite kontrolü
+            if durum.get("bekleyen_miktar", 0) >= kapasite:
+                break
+
+        oyuncu["fabrika_uretim_durumu"][arazi_id] = durum
 
 
 def uretim_hesapla(oyuncu, dakikada_uretim=1):
@@ -442,6 +519,11 @@ def mulk_satin_al(kullanici_adi, kategori, oge_anahtari):
 
     oyuncu = uretim_hesapla(_oyuncu_normalize(oyuncu))
 
+    # Aynı tesis türünden birden fazla almayı engelle
+    mevcut_adet = oyuncu["mulkler"].get(oge["alan"], 0)
+    if mevcut_adet >= 1:
+        return False, f"Bu tesis türünden zaten sahipsin. Her tesis türünden sadece bir tane alabilirsin.", None
+
     # Seviye kontrolü
     gerekli_seviye = kat.SEVIYE_GEREKSINIMLERI.get(oge["alan"], 1)
     if oyuncu["seviye"] < gerekli_seviye:
@@ -452,11 +534,11 @@ def mulk_satin_al(kullanici_adi, kategori, oge_anahtari):
 
     if not admin_mi(oyuncu):
         oyuncu["bakiye"] -= oge["fiyat"]
-    oyuncu["mulkler"][oge["alan"]] += 1
-    
+    oyuncu["mulkler"][oge["alan"]] = 1  # Sadece 1 tane olabilir
+
     # XP kazan
     xp_kazan(oyuncu, "tesis_satin_al")
-    
+
     oyuncu = admin_bakiye_uygula(oyuncu)
     veriler["oyuncular"][kullanici_adi] = oyuncu
     verileri_kaydet(veriler)
@@ -510,6 +592,18 @@ def fabrika_kur(kullanici_adi, arazi_id, fabrika_tipi):
     if not admin_mi(oyuncu):
         oyuncu["bakiye"] -= fab["fiyat"]
     arazi["fabrika"] = fabrika_tipi
+
+    # XP kazan
+    xp_kazan(oyuncu, "fabrika_kur")
+
+    # Fabrika üretim durumunu başlat
+    arazi_id_str = str(arazi_id)
+    oyuncu["fabrika_uretim_durumu"][arazi_id_str] = {
+        "baslatildi": False,
+        "baslama_zamani": None,
+        "bekleyen_miktar": 0
+    }
+
     oyuncu = admin_bakiye_uygula(oyuncu)
     veriler["oyuncular"][kullanici_adi] = oyuncu
     verileri_kaydet(veriler)
@@ -543,6 +637,10 @@ def oyuncu_ozet(oyuncu):
         "bal": oyuncu["urunler"]["bal"],
         "tahta": oyuncu["urunler"]["tahta"],
         "urunler": oyuncu["urunler"],
+        "bekleyen_urunler": oyuncu["bekleyen_urunler"],
+        "fabrika_uretim_durumu": oyuncu["fabrika_uretim_durumu"],
+        "seviye": oyuncu["seviye"],
+        "seviye_puani": oyuncu["seviye_puani"],
         "dakika_degeri": ekonomi["dakika_degeri"],
         "fabrika_sayisi": ekonomi["fabrika_sayisi"],
         "bos_arazi": ekonomi["bos_arazi"],
@@ -909,3 +1007,242 @@ def chat_mesajlari_getir():
     """Son chat mesajlarını döndürür"""
     veriler = verileri_yukle()
     return veriler.get("chat_mesajlari", [])
+
+
+def fabrika_uretim_baslat(kullanici_adi, arazi_id):
+    """Fabrika üretimini başlatır"""
+    veriler = verileri_yukle()
+    oyuncu = veriler["oyuncular"].get(kullanici_adi)
+    if oyuncu is None:
+        return False, "Oyuncu bulunamadı.", None
+
+    oyuncu = uretim_hesapla(_oyuncu_normalize(oyuncu))
+
+    arazi = next((a for a in oyuncu["araziler"] if a["id"] == arazi_id), None)
+    if arazi is None:
+        return False, "Arazi bulunamadı.", None
+    if not arazi.get("fabrika"):
+        return False, "Bu arazide fabrika yok.", None
+
+    arazi_id_str = str(arazi_id)
+    durum = oyuncu["fabrika_uretim_durumu"].get(arazi_id_str, {})
+
+    if durum.get("baslatildi", False):
+        return False, "Bu fabrika zaten çalışıyor.", None
+
+    # Kapasite dolu mu kontrol et
+    fab = kat.FABRIKA_TANIMLARI[arazi["fabrika"]]
+    kapasite = fab.get("kapasite", 0)
+    if durum.get("bekleyen_miktar", 0) >= kapasite:
+        return False, "Kapasite dolu! Önce ürünleri topla.", None
+
+    # Üretimi başlat
+    durum["baslatildi"] = True
+    durum["baslama_zamani"] = _simdi().isoformat()
+    oyuncu["fabrika_uretim_durumu"][arazi_id_str] = durum
+
+    # XP kazan
+    xp_kazan(oyuncu, "uretim_baslat")
+
+    veriler["oyuncular"][kullanici_adi] = oyuncu
+    verileri_kaydet(veriler)
+
+    return True, f"{fab['ad']} üretimi başlatıldı!", oyuncu
+
+
+def fabrika_uretim_durdur(kullanici_adi, arazi_id):
+    """Fabrika üretimini durdurur"""
+    veriler = verileri_yukle()
+    oyuncu = veriler["oyuncular"].get(kullanici_adi)
+    if oyuncu is None:
+        return False, "Oyuncu bulunamadı.", None
+
+    oyuncu = uretim_hesapla(_oyuncu_normalize(oyuncu))
+
+    arazi = next((a for a in oyuncu["araziler"] if a["id"] == arazi_id), None)
+    if arazi is None:
+        return False, "Arazi bulunamadı.", None
+    if not arazi.get("fabrika"):
+        return False, "Bu arazide fabrika yok.", None
+
+    arazi_id_str = str(arazi_id)
+    durum = oyuncu["fabrika_uretim_durumu"].get(arazi_id_str, {})
+
+    if not durum.get("baslatildi", False):
+        return False, "Bu fabrika zaten durdurulmuş.", None
+
+    fab = kat.FABRIKA_TANIMLARI[arazi["fabrika"]]
+
+    # Üretimi durdur
+    durum["baslatildi"] = False
+    durum["baslama_zamani"] = None
+    oyuncu["fabrika_uretim_durumu"][arazi_id_str] = durum
+
+    veriler["oyuncular"][kullanici_adi] = oyuncu
+    verileri_kaydet(veriler)
+
+    return True, f"{fab['ad']} üretimi durduruldu.", oyuncu
+
+
+def fabrika_urun_topla(kullanici_adi, arazi_id):
+    """Fabrikadan bekleyen ürünleri toplar"""
+    veriler = verileri_yukle()
+    oyuncu = veriler["oyuncular"].get(kullanici_adi)
+    if oyuncu is None:
+        return False, "Oyuncu bulunamadı.", None
+
+    oyuncu = uretim_hesapla(_oyuncu_normalize(oyuncu))
+
+    arazi = next((a for a in oyuncu["araziler"] if a["id"] == arazi_id), None)
+    if arazi is None:
+        return False, "Arazi bulunamadı.", None
+    if not arazi.get("fabrika"):
+        return False, "Bu arazide fabrika yok.", None
+
+    arazi_id_str = str(arazi_id)
+    durum = oyuncu["fabrika_uretim_durumu"].get(arazi_id_str, {})
+    fab = kat.FABRIKA_TANIMLARI[arazi["fabrika"]]
+
+    bekleyen_miktar = durum.get("bekleyen_miktar", 0)
+    if bekleyen_miktar == 0:
+        return False, "Toplanacak ürün yok.", None
+
+    # Bekleyen ürünleri envantere aktar
+    for urun, miktar in fab["cikti"].items():
+        # Bu fabrikadan gelen ürün miktarını hesapla
+        urun_miktari = min(bekleyen_miktar, oyuncu["bekleyen_urunler"].get(urun, 0))
+        oyuncu["urunler"][urun] += urun_miktari
+        oyuncu["bekleyen_urunler"][urun] -= urun_miktari
+
+    # Durumu sıfırla
+    durum["bekleyen_miktar"] = 0
+    oyuncu["fabrika_uretim_durumu"][arazi_id_str] = durum
+
+    # XP kazan
+    xp_kazan(oyuncu, "urun_topla")
+
+    veriler["oyuncular"][kullanici_adi] = oyuncu
+    verileri_kaydet(veriler)
+
+    return True, f"{bekleyen_miktar} ürün envantere eklendi!", oyuncu
+
+
+def tesis_uretim_baslat(kullanici_adi, tesis_alani):
+    """Tesis üretimini başlatır"""
+    veriler = verileri_yukle()
+    oyuncu = veriler["oyuncular"].get(kullanici_adi)
+    if oyuncu is None:
+        return False, "Oyuncu bulunamadı.", None
+
+    oyuncu = uretim_hesapla(_oyuncu_normalize(oyuncu))
+
+    # Tesisin sahibi olup olmadığını kontrol et
+    if oyuncu["mulkler"].get(tesis_alani, 0) == 0:
+        return False, "Bu tesise sahip değilsin.", None
+
+    # Tesis tanımını bul
+    kategori, anahtar, oge = kat.mulk_tanimi_bul(tesis_alani)
+    if not oge:
+        return False, "Geçersiz tesis.", None
+
+    durum = oyuncu["tesis_uretim_durumu"].get(tesis_alani, {})
+
+    if durum.get("baslatildi", False):
+        return False, "Bu tesis zaten çalışıyor.", None
+
+    # Kapasite dolu mu kontrol et
+    kapasite = oge.get("kapasite", 0)
+    if durum.get("bekleyen_miktar", 0) >= kapasite:
+        return False, "Kapasite dolu! Önce ürünleri topla.", None
+
+    # Üretimi başlat
+    durum["baslatildi"] = True
+    durum["baslama_zamani"] = _simdi().isoformat()
+    oyuncu["tesis_uretim_durumu"][tesis_alani] = durum
+
+    # XP kazan
+    xp_kazan(oyuncu, "uretim_baslat")
+
+    veriler["oyuncular"][kullanici_adi] = oyuncu
+    verileri_kaydet(veriler)
+
+    return True, f"{oge['ad']} üretimi başlatıldı!", oyuncu
+
+
+def tesis_uretim_durdur(kullanici_adi, tesis_alani):
+    """Tesis üretimini durdurur"""
+    veriler = verileri_yukle()
+    oyuncu = veriler["oyuncular"].get(kullanici_adi)
+    if oyuncu is None:
+        return False, "Oyuncu bulunamadı.", None
+
+    oyuncu = uretim_hesapla(_oyuncu_normalize(oyuncu))
+
+    # Tesisin sahibi olup olmadığını kontrol et
+    if oyuncu["mulkler"].get(tesis_alani, 0) == 0:
+        return False, "Bu tesise sahip değilsin.", None
+
+    # Tesis tanımını bul
+    kategori, anahtar, oge = kat.mulk_tanimi_bul(tesis_alani)
+    if not oge:
+        return False, "Geçersiz tesis.", None
+
+    durum = oyuncu["tesis_uretim_durumu"].get(tesis_alani, {})
+
+    if not durum.get("baslatildi", False):
+        return False, "Bu tesis zaten durdurulmuş.", None
+
+    # Üretimi durdur
+    durum["baslatildi"] = False
+    durum["baslama_zamani"] = None
+    oyuncu["tesis_uretim_durumu"][tesis_alani] = durum
+
+    veriler["oyuncular"][kullanici_adi] = oyuncu
+    verileri_kaydet(veriler)
+
+    return True, f"{oge['ad']} üretimi durduruldu.", oyuncu
+
+
+def tesis_urun_topla(kullanici_adi, tesis_alani):
+    """Tesisden bekleyen ürünleri toplar"""
+    veriler = verileri_yukle()
+    oyuncu = veriler["oyuncular"].get(kullanici_adi)
+    if oyuncu is None:
+        return False, "Oyuncu bulunamadı.", None
+
+    oyuncu = uretim_hesapla(_oyuncu_normalize(oyuncu))
+
+    # Tesisin sahibi olup olmadığını kontrol et
+    if oyuncu["mulkler"].get(tesis_alani, 0) == 0:
+        return False, "Bu tesise sahip değilsin.", None
+
+    # Tesis tanımını bul
+    kategori, anahtar, oge = kat.mulk_tanimi_bul(tesis_alani)
+    if not oge:
+        return False, "Geçersiz tesis.", None
+
+    durum = oyuncu["tesis_uretim_durumu"].get(tesis_alani, {})
+
+    bekleyen_miktar = durum.get("bekleyen_miktar", 0)
+    if bekleyen_miktar == 0:
+        return False, "Toplanacak ürün yok.", None
+
+    # Bekleyen ürünleri envantere aktar
+    uretim = oge.get("uretim", {})
+    for urun, miktar in uretim.items():
+        # Bu tesisden gelen ürün miktarını hesapla
+        urun_miktari = min(bekleyen_miktar, oyuncu["bekleyen_urunler"].get(urun, 0))
+        oyuncu["urunler"][urun] += urun_miktari
+        oyuncu["bekleyen_urunler"][urun] -= urun_miktari
+
+    # Durumu sıfırla
+    durum["bekleyen_miktar"] = 0
+    oyuncu["tesis_uretim_durumu"][tesis_alani] = durum
+
+    # XP kazan
+    xp_kazan(oyuncu, "urun_topla")
+
+    veriler["oyuncular"][kullanici_adi] = oyuncu
+    verileri_kaydet(veriler)
+
+    return True, f"{bekleyen_miktar} ürün envantere eklendi!", oyuncu

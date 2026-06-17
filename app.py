@@ -389,6 +389,87 @@ def api_klupler():
     return {"klupler": db.klupler_getir()}
 
 
+@app.route("/fabrika-uretim-baslat", methods=["POST"])
+def fabrika_uretim_baslat():
+    if not giris_yapilmis_mi():
+        return islem_cevabi(False, "Önce giriş yapmalısın.")
+
+    try:
+        arazi_id = int(request.form.get("arazi_id", 0))
+    except ValueError:
+        return islem_cevabi(False, "Geçersiz arazi.")
+
+    basarili, mesaj, oyuncu = db.fabrika_uretim_baslat(session["kullanici_adi"], arazi_id)
+    return islem_cevabi(basarili, mesaj, oyuncu)
+
+
+@app.route("/fabrika-uretim-durdur", methods=["POST"])
+def fabrika_uretim_durdur():
+    if not giris_yapilmis_mi():
+        return islem_cevabi(False, "Önce giriş yapmalısın.")
+
+    try:
+        arazi_id = int(request.form.get("arazi_id", 0))
+    except ValueError:
+        return islem_cevabi(False, "Geçersiz arazi.")
+
+    basarili, mesaj, oyuncu = db.fabrika_uretim_durdur(session["kullanici_adi"], arazi_id)
+    return islem_cevabi(basarili, mesaj, oyuncu)
+
+
+@app.route("/fabrika-urun-topla", methods=["POST"])
+def fabrika_urun_topla():
+    if not giris_yapilmis_mi():
+        return islem_cevabi(False, "Önce giriş yapmalısın.")
+
+    try:
+        arazi_id = int(request.form.get("arazi_id", 0))
+    except ValueError:
+        return islem_cevabi(False, "Geçersiz arazi.")
+
+    basarili, mesaj, oyuncu = db.fabrika_urun_topla(session["kullanici_adi"], arazi_id)
+    return islem_cevabi(basarili, mesaj, oyuncu)
+
+
+@app.route("/tesis-uretim-baslat", methods=["POST"])
+def tesis_uretim_baslat():
+    if not giris_yapilmis_mi():
+        return islem_cevabi(False, "Önce giriş yapmalısın.")
+
+    tesis_alani = request.form.get("tesis_alani", "")
+    if not tesis_alani:
+        return islem_cevabi(False, "Geçersiz tesis.")
+
+    basarili, mesaj, oyuncu = db.tesis_uretim_baslat(session["kullanici_adi"], tesis_alani)
+    return islem_cevabi(basarili, mesaj, oyuncu)
+
+
+@app.route("/tesis-uretim-durdur", methods=["POST"])
+def tesis_uretim_durdur():
+    if not giris_yapilmis_mi():
+        return islem_cevabi(False, "Önce giriş yapmalısın.")
+
+    tesis_alani = request.form.get("tesis_alani", "")
+    if not tesis_alani:
+        return islem_cevabi(False, "Geçersiz tesis.")
+
+    basarili, mesaj, oyuncu = db.tesis_uretim_durdur(session["kullanici_adi"], tesis_alani)
+    return islem_cevabi(basarili, mesaj, oyuncu)
+
+
+@app.route("/tesis-urun-topla", methods=["POST"])
+def tesis_urun_topla():
+    if not giris_yapilmis_mi():
+        return islem_cevabi(False, "Önce giriş yapmalısın.")
+
+    tesis_alani = request.form.get("tesis_alani", "")
+    if not tesis_alani:
+        return islem_cevabi(False, "Geçersiz tesis.")
+
+    basarili, mesaj, oyuncu = db.tesis_urun_topla(session["kullanici_adi"], tesis_alani)
+    return islem_cevabi(basarili, mesaj, oyuncu)
+
+
 if __name__ == "__main__":
     db.admin_hesabi_hazirla()
     port = int(os.environ.get("PORT", 5000))

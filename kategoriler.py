@@ -16,19 +16,22 @@ VARSAYILAN_ENERJI_KAPASITE = {
 
 # ── SEVİYE SİSTEMİ ──────────────────────────────────────────────
 SEVIYE_SISTEMI = {
-    "maks_seviye": 10,
+    "maks_seviye": 20,  # Maksimum seviye artırıldı
     "maliyet_carpani": 1.8,  # Her seviye için maliyet çarpanı
-    "uretim_carpani": 0.25,  # Her seviye için üretim artışı (%25)
-    "xp_per_seviye": 100,  # Her seviye için gereken XP
+    "uretim_carpani": 0.20,  # Her seviye için üretim artışı (%20)
+    "xp_per_seviye": 150,  # Her seviye için gereken XP (artırıldı)
 }
 
 # XP kazanma kaynakları
 XP_KAYNAKLARI = {
-    "tesis_satin_al": 10,  # Tesis satın alınca
-    "tesis_yukselt": 5,  # Tesis seviye atlayınca
-    "uretim_yap": 1,  # Her dakika üretim için
-    "pazar_satis": 3,  # Pazar satışı için
-    "pazar_satin_al": 2,  # Pazar alımı için
+    "tesis_satin_al": 25,  # Tesis satın alınca (artırıldı)
+    "tesis_yukselt": 15,  # Tesis seviye atlayınca (artırıldı)
+    "uretim_yap": 2,  # Her dakika üretim için (artırıldı)
+    "pazar_satis": 5,  # Pazar satışı için (artırıldı)
+    "pazar_satin_al": 3,  # Pazar alımı için (artırıldı)
+    "fabrika_kur": 30,  # Fabrika kurulunca
+    "uretim_baslat": 5,  # Üretim başlatınca
+    "urun_topla": 3,  # Ürün toplayınca
 }
 
 # Her tesis için seviye gereksinimleri (hangi seviyeden sonra alınabilir)
@@ -94,7 +97,7 @@ SEVIYE_GEREKSINIMLERI = {
 
 
 def _mulk(ad, fiyat, alan, ikon, aciklama, uretim=None, enerji_uretim=None,
-          girdi_tuketim=None, mesaj=None):
+          girdi_tuketim=None, mesaj=None, kapasite=None, saatlik_uretim=None):
     oge = {
         "ad": ad,
         "fiyat": fiyat,
@@ -109,6 +112,10 @@ def _mulk(ad, fiyat, alan, ikon, aciklama, uretim=None, enerji_uretim=None,
         oge["enerji_uretim"] = enerji_uretim
     if girdi_tuketim:
         oge["girdi_tuketim"] = girdi_tuketim
+    if kapasite:
+        oge["kapasite"] = kapasite
+    if saatlik_uretim:
+        oge["saatlik_uretim"] = saatlik_uretim
     return oge
 
 
@@ -299,8 +306,12 @@ _ENERJI = [
 def _bahce_ogeleri():
     ogeler = {}
     for anahtar, ad, urun, fiyat, ikon, aciklama in _BAHCE:
+        # Kapasite ve saatlik üretim değerleri
+        kapasite = 3000
+        saatlik_uretim = 300
         ogeler[anahtar] = _mulk(
-            ad, fiyat, f"bahce_{anahtar}", ikon, aciklama, uretim={urun: 1}
+            ad, fiyat, f"bahce_{anahtar}", ikon, aciklama, uretim={urun: 1},
+            kapasite=kapasite, saatlik_uretim=saatlik_uretim
         )
     return ogeler
 
@@ -313,9 +324,13 @@ def _ciftlik_ogeleri():
         uretim = item[6] if len(item) > 6 else None
         girdi = item[7] if len(item) > 7 else None
         uretim2 = item[8] if len(item) > 8 else None
+        # Kapasite ve saatlik üretim değerleri
+        kapasite = 2500
+        saatlik_uretim = 250
         oge = _mulk(
             ad, fiyat, f"ciftlik_{anahtar}", ikon, aciklama,
             uretim=uretim2 or uretim, girdi_tuketim=girdi,
+            kapasite=kapasite, saatlik_uretim=saatlik_uretim
         )
         if anahtar in yem_destekli:
             oge["yem_destek"] = {"yem": 1, "bonus": 0.5}
@@ -326,8 +341,12 @@ def _ciftlik_ogeleri():
 def _hammadde_ogeleri():
     ogeler = {}
     for anahtar, ad, urun, fiyat, ikon, aciklama in _HAMMADDE:
+        # Kapasite ve saatlik üretim değerleri
+        kapasite = 4000
+        saatlik_uretim = 400
         ogeler[anahtar] = _mulk(
-            ad, fiyat, f"hammadde_{anahtar}", ikon, aciklama, uretim={urun: 1}
+            ad, fiyat, f"hammadde_{anahtar}", ikon, aciklama, uretim={urun: 1},
+            kapasite=kapasite, saatlik_uretim=saatlik_uretim
         )
     return ogeler
 
@@ -343,9 +362,13 @@ def _enerji_ogeleri():
             enerji = item[7]
         elif len(item) > 6 and item[6]:
             enerji = item[6]
+        # Kapasite ve saatlik üretim değerleri
+        kapasite = 6000
+        saatlik_uretim = 600
         ogeler[anahtar] = _mulk(
             ad, fiyat, f"enerji_{anahtar}", ikon, aciklama,
             enerji_uretim=enerji, girdi_tuketim=girdi,
+            kapasite=kapasite, saatlik_uretim=saatlik_uretim
         )
     return ogeler
 
@@ -385,6 +408,7 @@ FABRIKA_TANIMLARI = {
         "aciklama": "Buğday tarlasından buğday alır → un üretir.",
         "enerji_tuketim": {"elektrik": 5, "su": 2},
         "girdi": {"bugday": 3}, "cikti": {"un": 1},
+        "kapasite": 5000, "saatlik_uretim": 500,
         "mesaj": "Un fabrikası kuruldu!",
     },
     "celik_fabrikasi": {
@@ -392,6 +416,7 @@ FABRIKA_TANIMLARI = {
         "aciklama": "Demir cevheri + kömür → çelik külçe. İnşaat için.",
         "enerji_tuketim": {"elektrik": 12, "dogalgaz": 6},
         "girdi": {"demir_cevheri": 2, "komur": 2}, "cikti": {"celik": 1},
+        "kapasite": 5000, "saatlik_uretim": 500,
         "mesaj": "Çelik fabrikası kuruldu!",
     },
     "odun_isleme": {
@@ -399,6 +424,7 @@ FABRIKA_TANIMLARI = {
         "aciklama": "Ormancılıktan tomruk → kereste + kağıt hamuru.",
         "enerji_tuketim": {"elektrik": 5, "su": 3},
         "girdi": {"tomruk": 2}, "cikti": {"kereste": 1, "kagit_hamuru": 1},
+        "kapasite": 4000, "saatlik_uretim": 400,
         "mesaj": "Odun işleme fabrikası kuruldu!",
     },
     "tekstil": {
@@ -406,6 +432,7 @@ FABRIKA_TANIMLARI = {
         "aciklama": "Pamuk + yün → kumaş. Mobilya fabrikasına gider.",
         "enerji_tuketim": {"elektrik": 6, "su": 4},
         "girdi": {"pamuk": 2, "yun": 1}, "cikti": {"kumas": 1},
+        "kapasite": 4500, "saatlik_uretim": 450,
         "mesaj": "Tekstil fabrikası kuruldu!",
     },
     "seker_fabrikasi": {
@@ -413,6 +440,7 @@ FABRIKA_TANIMLARI = {
         "aciklama": "Şeker pancarı → şeker. Çikolata fabrikasına gider.",
         "enerji_tuketim": {"elektrik": 5, "su": 3},
         "girdi": {"seker_pancari": 3}, "cikti": {"seker": 1},
+        "kapasite": 4800, "saatlik_uretim": 480,
         "mesaj": "Şeker fabrikası kuruldu!",
     },
     "yag_fabrikasi": {
@@ -420,6 +448,7 @@ FABRIKA_TANIMLARI = {
         "aciklama": "Ayçiçeği + zeytin + mısır → sıvı yağ.",
         "enerji_tuketim": {"elektrik": 5, "su": 2},
         "girdi": {"aycicegi": 2, "zeytin": 1, "misir": 1}, "cikti": {"sivi_yag": 1},
+        "kapasite": 4200, "saatlik_uretim": 420,
         "mesaj": "Yağ fabrikası kuruldu!",
     },
     "cikolata_fabrikasi": {
@@ -428,6 +457,7 @@ FABRIKA_TANIMLARI = {
         "enerji_tuketim": {"elektrik": 10, "su": 4, "dogalgaz": 2},
         "girdi": {"kakao": 1, "seker": 1, "sut": 1, "antep_fistigi": 1},
         "cikti": {"cikolata": 1},
+        "kapasite": 3000, "saatlik_uretim": 300,
         "mesaj": "Çikolata fabrikası kuruldu! En kârlı zincir.",
     },
     "cam_fabrikasi": {
@@ -435,6 +465,7 @@ FABRIKA_TANIMLARI = {
         "aciklama": "Kuvars/kum → cam şişe. Konserve ve içecek için.",
         "enerji_tuketim": {"elektrik": 15, "dogalgaz": 5},
         "girdi": {"kuvars": 3}, "cikti": {"cam": 2},
+        "kapasite": 5500, "saatlik_uretim": 550,
         "mesaj": "Cam fabrikası kuruldu!",
     },
     "konserve_fabrikasi": {
@@ -442,6 +473,7 @@ FABRIKA_TANIMLARI = {
         "aciklama": "Domates+biber+cam şişe → konserve gıda.",
         "enerji_tuketim": {"elektrik": 6, "su": 5},
         "girdi": {"domates": 2, "biber": 1, "cam": 1}, "cikti": {"konserve": 1},
+        "kapasite": 4600, "saatlik_uretim": 460,
         "mesaj": "Konserve fabrikası kuruldu!",
     },
     "meyve_suyu_fabrikasi": {
@@ -449,6 +481,7 @@ FABRIKA_TANIMLARI = {
         "aciklama": "Portakal+üzüm+elma → meyve suyu. Su enerjisi gerekir.",
         "enerji_tuketim": {"elektrik": 5, "su": 6},
         "girdi": {"portakal": 1, "uzum": 1, "elma": 1}, "cikti": {"meyve_suyu": 2},
+        "kapasite": 4400, "saatlik_uretim": 440,
         "mesaj": "Meyve suyu fabrikası kuruldu!",
     },
     "deri_fabrikasi": {
@@ -456,6 +489,7 @@ FABRIKA_TANIMLARI = {
         "aciklama": "Büyükbaş çiftliğinden ham deri → işlenmiş deri.",
         "enerji_tuketim": {"elektrik": 4, "su": 5},
         "girdi": {"deri": 2}, "cikti": {"islenmis_deri": 1},
+        "kapasite": 3800, "saatlik_uretim": 380,
         "mesaj": "Tabakhane kuruldu!",
     },
     "kagit_fabrikasi": {
@@ -463,6 +497,7 @@ FABRIKA_TANIMLARI = {
         "aciklama": "Kağıt hamuru → kitap ve ambalaj.",
         "enerji_tuketim": {"elektrik": 5, "su": 3},
         "girdi": {"kagit_hamuru": 2}, "cikti": {"kitap": 1},
+        "kapasite": 4100, "saatlik_uretim": 410,
         "mesaj": "Kağıt fabrikası kuruldu!",
     },
     "elektronik_fabrikasi": {
@@ -470,6 +505,7 @@ FABRIKA_TANIMLARI = {
         "aciklama": "Bakır cevheri → elektronik parça.",
         "enerji_tuketim": {"elektrik": 12, "su": 2},
         "girdi": {"bakir_cevheri": 2}, "cikti": {"elektronik": 1},
+        "kapasite": 3200, "saatlik_uretim": 320,
         "mesaj": "Elektronik fabrikası kuruldu!",
     },
     "yem_fabrikasi": {
@@ -477,6 +513,7 @@ FABRIKA_TANIMLARI = {
         "aciklama": "Mısır+soya+buğday → yem. Çiftlik verimini artırır.",
         "enerji_tuketim": {"elektrik": 4, "su": 2},
         "girdi": {"misir": 2, "soya": 1, "bugday": 1}, "cikti": {"yem": 2},
+        "kapasite": 4900, "saatlik_uretim": 490,
         "mesaj": "Yem fabrikası kuruldu!",
     },
     "mobilya_fabrikasi": {
@@ -484,6 +521,7 @@ FABRIKA_TANIMLARI = {
         "aciklama": "Kereste + kumaş → mobilya. Yüksek kâr.",
         "enerji_tuketim": {"elektrik": 6, "su": 2},
         "girdi": {"kereste": 2, "kumas": 1}, "cikti": {"mobilya": 1},
+        "kapasite": 3500, "saatlik_uretim": 350,
         "mesaj": "Mobilya fabrikası kuruldu!",
     },
 }

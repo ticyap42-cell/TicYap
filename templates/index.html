@@ -232,6 +232,20 @@
             margin-bottom: 20px;
             border: 2px solid #ffd700;
             box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            margin: 0;
+            border-radius: 0 0 15px 15px;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%);
+            min-height: 100vh;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            padding-top: 120px;
         }
 
         .ust-panel .player-info {
@@ -663,6 +677,9 @@
                                                 {% endif %}
                                             </h5>
                                             <p class="shop-desc mb-0">{{ oge.aciklama }}</p>
+                                            <small class="text-muted d-block mb-1">
+                                                Kapasite: {{ oge.kapasite }} · Saatlik: {{ oge.saatlik_uretim }}
+                                            </small>
                                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2">
                                                 <span class="badge bg-warning text-dark">
                                                     <i class="bi bi-cash-coin"></i> {{ oge.fiyat }} TL
@@ -693,6 +710,40 @@
                                                     </button>
                                                 </form>
                                             </div>
+                                            {% if oyuncu.mulkler.get(oge.alan, 0) > 0 %}
+                                            {% set durum = oyuncu.tesis_uretim_durumu.get(oge.alan, {}) %}
+                                            {% set bekleyen = durum.get('bekleyen_miktar', 0) %}
+                                            {% set baslatildi = durum.get('baslatildi', False) %}
+                                            <div class="d-flex gap-2 align-items-center mt-2">
+                                                {% if baslatildi %}
+                                                <span class="badge bg-success">Çalışıyor</span>
+                                                <form action="{{ url_for('tesis_uretim_durdur') }}" method="POST" class="ajax-form">
+                                                    <input type="hidden" name="tesis_alani" value="{{ oge.alan }}">
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                        <i class="bi bi-pause"></i> Durdur
+                                                    </button>
+                                                </form>
+                                                {% else %}
+                                                <span class="badge bg-secondary">Durduruldu</span>
+                                                <form action="{{ url_for('tesis_uretim_baslat') }}" method="POST" class="ajax-form">
+                                                    <input type="hidden" name="tesis_alani" value="{{ oge.alan }}">
+                                                    <button type="submit" class="btn btn-outline-success btn-sm"
+                                                            {% if bekleyen >= oge.kapasite %}disabled{% endif %}>
+                                                        <i class="bi bi-play"></i> Başlat
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                                {% if bekleyen > 0 %}
+                                                <span class="badge bg-warning text-dark">{{ bekleyen }} bekleyen</span>
+                                                <form action="{{ url_for('tesis_urun_topla') }}" method="POST" class="ajax-form">
+                                                    <input type="hidden" name="tesis_alani" value="{{ oge.alan }}">
+                                                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                                                        <i class="bi bi-box-seam"></i> Topla
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                            </div>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
@@ -759,12 +810,48 @@
                                             {% endif %}
                                         </div>
                                         {% if arazi.fabrika %}
-                                        <small class="text-muted d-block mt-1">
-                                            Enerji: 
-                                            {% for tur, miktar in fabrikalar[arazi.fabrika].enerji_tuketim.items() %}
-                                            {{ enerji_adlari[tur] }} {{ miktar }}/dk{% if not loop.last %}, {% endif %}
-                                            {% endfor %}
-                                        </small>
+                                        <div class="mt-2">
+                                            <small class="text-muted d-block mb-1">
+                                                Enerji:
+                                                {% for tur, miktar in fabrikalar[arazi.fabrika].enerji_tuketim.items() %}
+                                                {{ enerji_adlari[tur] }} {{ miktar }}/dk{% if not loop.last %}, {% endif %}
+                                                {% endfor %}
+                                                · Kapasite: {{ fabrikalar[arazi.fabrika].kapasite }}
+                                                · Saatlik: {{ fabrikalar[arazi.fabrika].saatlik_uretim }}
+                                            </small>
+                                            {% set durum = oyuncu.fabrika_uretim_durumu.get(str(arazi.id), {}) %}
+                                            {% set bekleyen = durum.get('bekleyen_miktar', 0) %}
+                                            {% set baslatildi = durum.get('baslatildi', False) %}
+                                            <div class="d-flex gap-2 align-items-center mt-2">
+                                                {% if baslatildi %}
+                                                <span class="badge bg-success">Çalışıyor</span>
+                                                <form action="{{ url_for('fabrika_uretim_durdur') }}" method="POST" class="ajax-form">
+                                                    <input type="hidden" name="arazi_id" value="{{ arazi.id }}">
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                        <i class="bi bi-pause"></i> Durdur
+                                                    </button>
+                                                </form>
+                                                {% else %}
+                                                <span class="badge bg-secondary">Durduruldu</span>
+                                                <form action="{{ url_for('fabrika_uretim_baslat') }}" method="POST" class="ajax-form">
+                                                    <input type="hidden" name="arazi_id" value="{{ arazi.id }}">
+                                                    <button type="submit" class="btn btn-outline-success btn-sm"
+                                                            {% if bekleyen >= fabrikalar[arazi.fabrika].kapasite %}disabled{% endif %}>
+                                                        <i class="bi bi-play"></i> Başlat
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                                {% if bekleyen > 0 %}
+                                                <span class="badge bg-warning text-dark">{{ bekleyen }} bekleyen</span>
+                                                <form action="{{ url_for('fabrika_urun_topla') }}" method="POST" class="ajax-form">
+                                                    <input type="hidden" name="arazi_id" value="{{ arazi.id }}">
+                                                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                                                        <i class="bi bi-box-seam"></i> Topla
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                            </div>
+                                        </div>
                                         {% endif %}
                                     </div>
                                     {% endfor %}
@@ -783,6 +870,8 @@
                                     <p class="shop-desc mb-1">{{ fab.aciklama }}</p>
                                     <small class="text-muted">
                                         Kurulum: {{ fab.fiyat }} TL ·
+                                        Kapasite: {{ fab.kapasite }} ·
+                                        Saatlik: {{ fab.saatlik_uretim }} ·
                                         Enerji/dk:
                                         {% for tur, miktar in fab.enerji_tuketim.items() %}
                                         {{ enerji_adlari[tur] }} {{ miktar }}{% if not loop.last %}, {% endif %}
