@@ -6,11 +6,28 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 import kategoriler as kat
 
-# Render'da kalıcı depolama için /opt/render/project/src kullan
-if os.path.exists("/opt/render/project/src"):
-    DOSYA_YOLU = "/opt/render/project/src/oyuncular.json"
+# PostgreSQL bağlantısı (Render'da DATABASE_URL çevre değişkeni kullanılır)
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+if DATABASE_URL:
+    import psycopg2
+    from psycopg2 import sql
+    import urllib.parse
+
+    # Render PostgreSQL URL'sini parse et
+    parsed = urllib.parse.urlparse(DATABASE_URL)
+    DB_CONFIG = {
+        "dbname": parsed.path[1:],
+        "user": parsed.username,
+        "password": parsed.password,
+        "host": parsed.hostname,
+        "port": parsed.port or 5432,
+    }
+    USE_POSTGRES = True
 else:
+    # Yerel geliştirme için JSON dosyası
     DOSYA_YOLU = os.path.join(os.path.dirname(__file__), "oyuncular.json")
+    USE_POSTGRES = False
 
 ADMIN_KULLANICI = "TicYapAdmin"
 ADMIN_SIFRE = "admin2026"
@@ -85,6 +102,187 @@ def _varsayilan_oyuncu(kullanici_adi):
         "fabrika_uretim_durumu": {},  # Fabrika üretim durumu (arazi_id -> {baslatildi: bool, baslama_zamani: str, bekleyen_miktar: int})
         "tesis_uretim_durumu": {},  # Tüm tesisler için üretim durumu (tesis_alani -> {baslatildi: bool, baslama_zamani: str, bekleyen_miktar: int})
     }
+
+
+def _postgres_baglan():
+    """PostgreSQL bağlantısı oluştur"""
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        conn.autocommit = True
+        return conn
+    except Exception as e:
+        print(f"PostgreSQL bağlantı hatası: {e}")
+        return None
+
+
+def _postgres_tablo_olustur():
+    """PostgreSQL tablolarını oluştur"""
+    conn = _postgres_baglan()
+    if not conn:
+        return False
+
+    try:
+        with conn.cursor() as cur:
+            # Oyuncular tablosu
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS oyuncular (
+                    kullanici_adi VARCHAR(50) PRIMARY KEY,
+                    bakiye INTEGER DEFAULT 1000,
+                    ciftlik_sayisi INTEGER DEFAULT 0,
+                    demir_ocagi_sayisi INTEGER DEFAULT 0,
+                    degirmen_sayisi INTEGER DEFAULT 0,
+                    dokumhane_sayisi INTEGER DEFAULT 0,
+                    mulkler JSONB DEFAULT '{}',
+                    araziler JSONB DEFAULT '[]',
+                    enerji JSONB DEFAULT '{}',
+                    urunler JSONB DEFAULT '{}',
+                    bekleyen_urunler JSONB DEFAULT '{}',
+                    son_uretim TIMESTAMP,
+                    sifre_hash VARCHAR(255),
+                    is_admin BOOLEAN DEFAULT FALSE,
+                    seviye INTEGER DEFAULT 1,
+                    seviye_puani INTEGER DEFAULT 0,
+                    klup VARCHAR(50),
+                    fabrika_uretim_durumu JSONB DEFAULT '{}',
+                    tesis_uretim_durumu JSONB DEFAULT '{}'
+                )
+            """)
+        return True
+    except Exception as e:
+        print(f"Tablo oluşturma hatası: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def _postgres_oyuncu_ekle(oyuncu):
+    """PostgreSQL'e oyuncu ekle"""
+    conn = _postgres_baglan()
+    if not conn:
+        return False
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO oyuncular (
+                    kullanici_adi, bakiye, ciftlik_sayisi, demir_ocagi_sayisi, degirmen_sayisi,
+                    dokumhane_sayisi, mulkler, araziler, enerji, urunler, bekleyen_urunler,
+                    son_uretim, sifre_hash, is_admin, seviye, seviye_puani, klup,
+                    fabrika_uretim_durumu, tesis_uretim_durumu
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (kullanici_adi) DO NOTHING
+            """, (
+                oyuncu["kullanici_adi"],
+                oyuncu["bakiye"],
+                oyuncu["ciftlik_sayisi"],
+                oyuncu["demir_ocagi_sayisi"],
+                oyuncu["degirmen_sayisi"],
+                oyuncu["dokumhane_sayisi"],
+                json.dumps(oyuncu["mulkler"]),
+                json.dumps(oyuncu["araziler"]),
+                json.dumps(oyuncu["enerji"]),
+                json.dumps(oyuncu["urunler"]),
+                json.dumps(oyuncu["bekleyen_urunler"]),
+                oyuncu["son_uretim"],
+                oyuncu["sifre_hash"],
+                oyuncu["is_admin"],
+                oyuncu["seviye"],
+                oyuncu["seviye_puani"],
+                oyuncu["klup"],
+                json.dumps(oyuncu["fabrika_uretim_durumu"]),
+                json.dumps(oyuncu["tesis_uretim_durumu"]),
+            ))
+        return True
+    except Exception as e:
+        print(f"Oyuncu ekleme hatası: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def _postgres_oyuncu_guncelle(oyuncu):
+    """PostgreSQL'de oyuncu güncelle"""
+    conn = _postgres_baglan()
+    if not conn:
+        return False
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE oyuncular SET
+                    bakiye = %s,
+                    ciftlik_sayisi = %s,
+                    demir_ocagi_sayisi = %s,
+                    degirmen_sayisi = %s,
+                    dokumhane_sayisi = %s,
+                    mulkler = %s,
+                    araziler = %s,
+                    enerji = %s,
+                    urunler = %s,
+                    bekleyen_urunler = %s,
+                    son_uretim = %s,
+                    sifre_hash = %s,
+                    is_admin = %s,
+                    seviye = %s,
+                    seviye_puani = %s,
+                    klup = %s,
+                    fabrika_uretim_durumu = %s,
+                    tesis_uretim_durumu = %s
+                WHERE kullanici_adi = %s
+            """, (
+                oyuncu["bakiye"],
+                oyuncu["ciftlik_sayisi"],
+                oyuncu["demir_ocagi_sayisi"],
+                oyuncu["degirmen_sayisi"],
+                oyuncu["dokumhane_sayisi"],
+                json.dumps(oyuncu["mulkler"]),
+                json.dumps(oyuncu["araziler"]),
+                json.dumps(oyuncu["enerji"]),
+                json.dumps(oyuncu["urunler"]),
+                json.dumps(oyuncu["bekleyen_urunler"]),
+                oyuncu["son_uretim"],
+                oyuncu["sifre_hash"],
+                oyuncu["is_admin"],
+                oyuncu["seviye"],
+                oyuncu["seviye_puani"],
+                oyuncu["klup"],
+                json.dumps(oyuncu["fabrika_uretim_durumu"]),
+                json.dumps(oyuncu["tesis_uretim_durumu"]),
+                oyuncu["kullanici_adi"],
+            ))
+        return True
+    except Exception as e:
+        print(f"Oyuncu güncelleme hatası: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def _postgres_tum_oyuncular():
+    """PostgreSQL'den tüm oyuncuları getir"""
+    conn = _postgres_baglan()
+    if not conn:
+        return {}
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM oyuncular")
+            rows = cur.fetchall()
+            columns = [desc[0] for desc in cur.description]
+            oyuncular = {}
+            for row in rows:
+                oyuncu = dict(zip(columns, row))
+                # JSON alanlarını decode et
+                for field in ["mulkler", "araziler", "enerji", "urunler", "bekleyen_urunler", "fabrika_uretim_durumu", "tesis_uretim_durumu"]:
+                    if oyuncu[field]:
+                        oyuncu[field] = json.loads(oyuncu[field])
+                oyuncular[oyuncu["kullanici_adi"]] = oyuncu
+            return oyuncular
+    except Exception as e:
+        print(f"Oyuncular getirme hatası: {e}")
+        return {}
+    finally:
+        conn.close()
 
 
 def admin_mi(oyuncu):
@@ -191,18 +389,44 @@ def _veri_normalize(veriler):
 
 
 def verileri_yukle():
-    if not os.path.exists(DOSYA_YOLU):
-        bos = {"oyuncular": {}, "pazar": []}
-        verileri_kaydet(bos)
-        return bos
+    if USE_POSTGRES:
+        # PostgreSQL kullan
+        _postgres_tablo_olustur()
+        oyuncular = _postgres_tum_oyuncular()
+        return {"oyuncular": oyuncular, "pazar": [], "klupler": [], "chat_mesajlari": []}
+    else:
+        # JSON dosyası kullan
+        if not os.path.exists(DOSYA_YOLU):
+            bos = {"oyuncular": {}, "pazar": []}
+            verileri_kaydet(bos)
+            return bos
 
-    with open(DOSYA_YOLU, "r", encoding="utf-8") as dosya:
-        return _veri_normalize(json.load(dosya))
+        with open(DOSYA_YOLU, "r", encoding="utf-8") as dosya:
+            return _veri_normalize(json.load(dosya))
 
 
 def verileri_kaydet(veriler):
-    with open(DOSYA_YOLU, "w", encoding="utf-8") as dosya:
-        json.dump(veriler, dosya, ensure_ascii=False, indent=2)
+    if USE_POSTGRES:
+        # PostgreSQL kullan - sadece oyuncuları güncelle
+        for kullanici_adi, oyuncu in veriler["oyuncular"].items():
+            # Önce oyuncu var mı kontrol et
+            conn = _postgres_baglan()
+            if conn:
+                try:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT kullanici_adi FROM oyuncular WHERE kullanici_adi = %s", (kullanici_adi,))
+                        if cur.fetchone():
+                            # Var - güncelle
+                            _postgres_oyuncu_guncelle(oyuncu)
+                        else:
+                            # Yok - ekle
+                            _postgres_oyuncu_ekle(oyuncu)
+                finally:
+                    conn.close()
+    else:
+        # JSON dosyası kullan
+        with open(DOSYA_YOLU, "w", encoding="utf-8") as dosya:
+            json.dump(veriler, dosya, ensure_ascii=False, indent=2)
 
 
 def oyuncu_getir(kullanici_adi):
