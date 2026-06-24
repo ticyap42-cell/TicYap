@@ -172,10 +172,12 @@ def _postgres_oyuncu_ekle(oyuncu):
     """PostgreSQL'e oyuncu ekle"""
     conn = _postgres_baglan()
     if not conn:
+        print("PostgreSQL bağlantısı başarısız, oyuncu eklenemiyor")
         return False
 
     try:
         with conn.cursor() as cur:
+            print(f"PostgreSQL'e oyuncu ekleniyor: {oyuncu.get('kullanici_adi', 'bilinmiyor')}")
             cur.execute("""
                 INSERT INTO oyuncular (
                     kullanici_adi, bakiye, ciftlik_sayisi, demir_ocagi_sayisi, degirmen_sayisi,
@@ -205,6 +207,7 @@ def _postgres_oyuncu_ekle(oyuncu):
                 json.dumps(oyuncu["fabrika_uretim_durumu"]),
                 json.dumps(oyuncu["tesis_uretim_durumu"]),
             ))
+            print(f"PostgreSQL'e oyuncu başarıyla eklendi: {oyuncu.get('kullanici_adi', 'bilinmiyor')}")
         return True
     except Exception as e:
         print(f"Oyuncu ekleme hatası: {e}")
