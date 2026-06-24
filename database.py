@@ -688,7 +688,11 @@ def _fabrika_uretim(oyuncu, dakika):
 def uretim_hesapla(oyuncu, dakikada_uretim=1):
     oyuncu = _oyuncu_normalize(oyuncu)
 
-    son = datetime.fromisoformat(oyuncu["son_uretim"])
+    # son_uretim zaten datetime ise kullan, değilse string'den çevir
+    if isinstance(oyuncu["son_uretim"], datetime):
+        son = oyuncu["son_uretim"]
+    else:
+        son = datetime.fromisoformat(oyuncu["son_uretim"])
     if son.tzinfo is None:
         son = son.replace(tzinfo=timezone.utc)
 
