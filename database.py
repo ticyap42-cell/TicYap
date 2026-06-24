@@ -12,20 +12,26 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 # PostgreSQL aktif - DATABASE_URL varsa kullan
 USE_POSTGRES = bool(DATABASE_URL)
 
+# PostgreSQL bağlantı testi
 if USE_POSTGRES and DATABASE_URL:
-    import psycopg2
-    from psycopg2 import sql
-    import urllib.parse
+    try:
+        import psycopg2
+        from psycopg2 import sql
+        import urllib.parse
 
-    # Render PostgreSQL URL'sini parse et
-    parsed = urllib.parse.urlparse(DATABASE_URL)
-    DB_CONFIG = {
-        "dbname": parsed.path[1:],
-        "user": parsed.username,
-        "password": parsed.password,
-        "host": parsed.hostname,
-        "port": parsed.port or 5432,
-    }
+        # Render PostgreSQL URL'sini parse et
+        parsed = urllib.parse.urlparse(DATABASE_URL)
+        DB_CONFIG = {
+            "dbname": parsed.path[1:],
+            "user": parsed.username,
+            "password": parsed.password,
+            "host": parsed.hostname,
+            "port": parsed.port or 5432,
+        }
+        print(f"PostgreSQL bağlantı ayarları: host={DB_CONFIG['host']}, dbname={DB_CONFIG['dbname']}, user={DB_CONFIG['user']}")
+    except Exception as e:
+        print(f"PostgreSQL import hatası: {e}")
+        USE_POSTGRES = False
 else:
     # Render'da kalıcı depolama için /opt/render/project/src kullan
     # Eğer bu yol yoksa, yerel geliştirme için proje dizinini kullan
