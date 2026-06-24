@@ -288,10 +288,12 @@ def _postgres_tum_oyuncular():
             oyuncular = {}
             for row in rows:
                 oyuncu = dict(zip(columns, row))
-                # JSON alanlarını decode et
+                # JSON alanlarını decode et (zaten dict ise gerek yok)
                 for field in ["mulkler", "araziler", "enerji", "urunler", "bekleyen_urunler", "fabrika_uretim_durumu", "tesis_uretim_durumu"]:
                     if oyuncu[field]:
-                        oyuncu[field] = json.loads(oyuncu[field])
+                        if isinstance(oyuncu[field], str):
+                            oyuncu[field] = json.loads(oyuncu[field])
+                        # zaten dict ise olduğu gibi bırak
                 oyuncular[oyuncu["kullanici_adi"]] = oyuncu
             return oyuncular
     except Exception as e:
