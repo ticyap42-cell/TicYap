@@ -536,6 +536,18 @@ def admin_hesabi_hazirla():
     oyuncu["bakiye"] = ADMIN_BAKIYE
     oyuncu["sifre_hash"] = generate_password_hash(ADMIN_SIFRE)
     oyuncu_kaydet(oyuncu)
+
+    # PostgreSQL modunda admin hesabının eklendiğini kontrol et
+    if USE_POSTGRES:
+        print(f"PostgreSQL modunda admin hesabı kontrol ediliyor...")
+        admin_kontrol = oyuncu_getir(ADMIN_KULLANICI)
+        if admin_kontrol:
+            print(f"Admin hesabı PostgreSQL'de bulundu: {ADMIN_KULLANICI}")
+        else:
+            print(f"Admin hesabı PostgreSQL'de bulunamadı, manuel ekleniyor...")
+            # Manuel olarak PostgreSQL'e ekle
+            _postgres_oyuncu_ekle(oyuncu)
+
     print(f"Admin hesabı hazırlandı: {ADMIN_KULLANICI}")
     return oyuncu
 
