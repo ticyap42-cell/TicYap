@@ -40,7 +40,7 @@ else:
     else:
         DOSYA_YOLU = os.path.join(os.path.dirname(__file__), "oyuncular.json")
 
-ADMIN_KULLANICI = "TicYapAdmin"
+ADMIN_KULLANICI = "TicYapAdmin2"
 ADMIN_SIFRE = "admin2026"
 ADMIN_BAKIYE = 9_999_999_999
 
