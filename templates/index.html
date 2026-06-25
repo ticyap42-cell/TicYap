@@ -1293,7 +1293,12 @@
                 form.addEventListener("submit", async (e) => {
                     e.preventDefault();
                     const btn = form.querySelector('button[type="submit"]');
-                    if (btn) btn.disabled = true;
+                    if (btn) {
+                        btn.disabled = true;
+                        const originalText = btn.innerHTML;
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>İşleniyor...';
+                        btn.dataset.originalText = originalText;
+                    }
 
                     try {
                         const body = new FormData(form);
@@ -1312,7 +1317,10 @@
                     } catch {
                         bildirimGoster("Bağlantı hatası. Tekrar dene.", false);
                     } finally {
-                        if (btn) btn.disabled = false;
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerHTML = btn.dataset.originalText || btn.innerHTML;
+                        }
                     }
                 });
             });
