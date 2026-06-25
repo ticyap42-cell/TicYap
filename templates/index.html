@@ -958,15 +958,41 @@
                                 <div class="shop-item {% if not loop.last %}mb-3{% endif %}">
                                     <h6 class="fw-bold"><i class="bi {{ fab.ikon }}"></i> {{ fab.ad }}</h6>
                                     <p class="shop-desc mb-1">{{ fab.aciklama }}</p>
-                                    <small class="text-muted">
-                                        Kurulum: {{ fab.fiyat }} TL ·
-                                        Kapasite: {{ fab.kapasite }} ·
-                                        Saatlik: {{ fab.saatlik_uretim }} ·
-                                        Enerji/dk:
-                                        {% for tur, miktar in fab.enerji_tuketim.items() %}
-                                        {{ enerji_adlari[tur] }} {{ miktar }}{% if not loop.last %}, {% endif %}
-                                        {% endfor %}
-                                    </small>
+                                    <div class="mb-1">
+                                        <small class="text-muted">
+                                            <i class="bi bi-cash-coin"></i> Kurulum: {{ fab.fiyat }} TL ·
+                                            <i class="bi bi-box-seam"></i> Kapasite: {{ fab.kapasite }}
+                                        </small>
+                                    </div>
+                                    <div class="mb-1">
+                                        <small class="text-muted">
+                                            <i class="bi bi-clock"></i> Saatlik: {{ fab.saatlik_uretim }}
+                                        </small>
+                                    </div>
+                                    <div class="mb-1">
+                                        <small class="text-warning">
+                                            <i class="bi bi-lightning"></i> Enerji:
+                                            {% for tur, miktar in fab.enerji_tuketim.items() %}
+                                                {{ enerji_adlari[tur] }} {{ miktar }}/dk{% if not loop.last %}, {% endif %}
+                                            {% endfor %}
+                                        </small>
+                                    </div>
+                                    <div class="mb-1">
+                                        <small class="text-danger">
+                                            <i class="bi bi-arrow-down-circle"></i> Girdi:
+                                            {% for urun, miktar in fab.girdi.items() %}
+                                                {{ miktar }} {{ urun }}{% if not loop.last %}, {% endif %}
+                                            {% endfor %}
+                                        </small>
+                                    </div>
+                                    <div class="mb-1">
+                                        <small class="text-success">
+                                            <i class="bi bi-arrow-up-circle"></i> Çıktı:
+                                            {% for urun, miktar in fab.cikti.items() %}
+                                                {{ miktar }} {{ urun }}{% if not loop.last %}, {% endif %}
+                                            {% endfor %}
+                                        </small>
+                                    </div>
                                 </div>
                                 {% endfor %}
                             </div>
@@ -987,8 +1013,8 @@
                                     <label class="form-label fw-semibold">Ürün</label>
                                     <select class="form-select" name="urun" id="pazar-urun-select" required>
                                         {% for anahtar, ad in urun_adlari.items() %}
-                                        <option value="{{ anahtar }}">
-                                            {{ ad }} (elde: {{ oyuncu.urunler[anahtar] }})
+                                        <option value="{{ anahtar }}" data-fiyat="{{ referans_fiyatlar.get(anahtar, 0) }}">
+                                            {{ ad }} (elde: {{ oyuncu.urunler[anahtar] }}) - Ref: {{ referans_fiyatlar.get(anahtar, 0) }} TL
                                         </option>
                                         {% endfor %}
                                     </select>
@@ -1065,6 +1091,11 @@
                         <div class="alert alert-success">
                             <strong>Klüptesin!</strong> Klüp ID: {{ oyuncu.klup }}
                         </div>
+                        <div class="mb-3">
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle"></i> Klüp üyeleri arasında üretim bonusları paylaşılır.
+                            </small>
+                        </div>
                         <form action="{{ url_for('klup_ayril') }}" method="POST" class="ajax-form">
                             <button type="submit" class="btn btn-danger">
                                 <i class="bi bi-person-dash"></i> Klüpten Ayrıl
@@ -1072,7 +1103,10 @@
                         </form>
                         {% else %}
                         <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
                             Herhangi bir klüpte değilsin. Bir klübe katıl veya kendi klübünü oluştur!
+                            <br>
+                            <small class="text-muted">Klüpler üretim bonusları ve ortak hedefler sunar.</small>
                         </div>
                         {% endif %}
                     </div>

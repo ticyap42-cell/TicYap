@@ -537,6 +537,8 @@ def admin_hesabi_hazirla():
     oyuncu["is_admin"] = True
     oyuncu["bakiye"] = ADMIN_BAKIYE
     oyuncu["sifre_hash"] = generate_password_hash(ADMIN_SIFRE)
+    oyuncu["seviye"] = 999999  # Sınırsız seviye
+    oyuncu["seviye_puani"] = 999999999  # Sınırsız seviye puanı
     oyuncu_kaydet(oyuncu)
 
     # PostgreSQL modunda admin hesabının eklendiğini kontrol et
