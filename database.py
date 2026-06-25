@@ -104,6 +104,8 @@ def _varsayilan_oyuncu(kullanici_adi):
         "enerji": _varsayilan_enerji(),
         "urunler": {urun: 0 for urun in GECERLI_URUNLER},
         "bekleyen_urunler": {urun: 0 for urun in GECERLI_URUNLER},  # Toplanmayı bekleyen ürünler
+        "depo_kapasitesi": 1000,  # Başlangıç depo kapasitesi
+        "depo_seviyesi": 1,  # Depo seviyesi
         "son_uretim": _simdi().isoformat(),
         "sifre_hash": "",
         "is_admin": False,
@@ -943,6 +945,41 @@ def _yeni_ilan_id(veriler):
     if not pazar:
         return 1
     return max(ilan["id"] for ilan in pazar) + 1
+
+
+def depo_seviyesi_yukselt(kullanici_adi):
+    """Depo seviyesini yükselt"""
+    veriler = verileri_yukle()
+    oyuncu = veriler["oyuncular"].get(kullanici_adi)
+    if oyuncu is None:
+        return False, "Oyuncu bulunamadı."
+
+    mevcut_seviye = oyuncu.get("depo_seviyesi", 1)
+    yeni_seviye = mevcut_seviye + 1
+
+    # Seviye fiyatı: seviye * 5000
+    fiyat = yeni_seviye * 5000
+
+    if oyuncu["bakiye"] < fiyat:
+        return False, f"Yeterli bakiye yok. Gereken: {fiyat} TL"
+
+    oyuncu["bakiye"] -= fiyat
+    oyuncu["depo_seviyesi"] = yeni_seviye
+    # Kapasite: seviye * 1000
+    oyuncu["depo_kapasitesi"] = yeni_seviye * 1000
+
+    veriler["oyuncular"][kullanici_adi] = oyuncu
+    verileri_kaydet(veriler)
+
+    return True, f"Depo seviyesi {yeni_seviye}'e yükseltildi! Yeni kapasite: {yeni_seviye * 1000}"
+
+
+def depo_kapasitesi_kontrol(oyuncu, urun, miktar):
+    """Depo kapasitesi kontrolü"""
+    toplam_urun = sum(oyuncu["urunler"].values())
+    if toplam_urun + miktar > oyuncu.get("depo_kapasitesi", 1000):
+        return False
+    return True
 
 
 def pazar_ilan_ver(satici_adi, urun, miktar, birim_fiyat):

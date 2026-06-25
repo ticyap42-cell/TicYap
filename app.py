@@ -531,6 +531,18 @@ def admin_oyuncu_bakiye_ayarla():
     return islem_cevabi(basarili, mesaj)
 
 
+@app.route("/depo-seviyesi-yukselt", methods=["POST"])
+def depo_seviyesi_yukselt():
+    if not giris_yapilmis_mi():
+        return islem_cevabi(False, "Önce giriş yapmalısın.")
+
+    basarili, mesaj = db.depo_seviyesi_yukselt(session["kullanici_adi"])
+    if basarili:
+        oyuncu = db.aktif_oyuncu_verileri(session["kullanici_adi"])
+        return islem_cevabi(basarili, mesaj, oyuncu=oyuncu)
+    return islem_cevabi(basarili, mesaj)
+
+
 if __name__ == "__main__":
     db.admin_hesabi_hazirla()
     port = int(os.environ.get("PORT", 5000))
