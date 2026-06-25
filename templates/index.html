@@ -684,9 +684,42 @@
                                                 {% endif %}
                                             </h5>
                                             <p class="shop-desc mb-0">{{ oge.aciklama }}</p>
-                                            <small class="text-muted d-block mb-1">
-                                                Kapasite: {{ oge.kapasite }} · Saatlik: {{ oge.saatlik_uretim }}
-                                            </small>
+                                            <div class="mb-1">
+                                                <small class="text-muted">
+                                                    <i class="bi bi-box-seam"></i> Kapasite: {{ oge.kapasite }} ·
+                                                    <i class="bi bi-clock"></i> Saatlik: {{ oge.saatlik_uretim }}
+                                                </small>
+                                            </div>
+                                            {% if oge.get('girdi_tuketim') %}
+                                            <div class="mb-1">
+                                                <small class="text-danger">
+                                                    <i class="bi bi-arrow-down-circle"></i> Girdi:
+                                                    {% for urun, miktar in oge.girdi_tuketim.items() %}
+                                                        {{ miktar }} {{ urun }}{% if not loop.last %}, {% endif %}
+                                                    {% endfor %}
+                                                </small>
+                                            </div>
+                                            {% endif %}
+                                            {% if oge.get('uretim') %}
+                                            <div class="mb-1">
+                                                <small class="text-success">
+                                                    <i class="bi bi-arrow-up-circle"></i> Çıktı:
+                                                    {% for urun, miktar in oge.uretim.items() %}
+                                                        {{ miktar }} {{ urun }}{% if not loop.last %}, {% endif %}
+                                                    {% endfor %}
+                                                </small>
+                                            </div>
+                                            {% endif %}
+                                            {% if oge.get('enerji_tuketim') %}
+                                            <div class="mb-1">
+                                                <small class="text-warning">
+                                                    <i class="bi bi-lightning"></i> Enerji:
+                                                    {% for tur, miktar in oge.enerji_tuketim.items() %}
+                                                        {{ miktar }} {{ tur }}{% if not loop.last %}, {% endif %}
+                                                    {% endfor %}
+                                                </small>
+                                            </div>
+                                            {% endif %}
                                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2">
                                                 <span class="badge bg-warning text-dark">
                                                     <i class="bi bi-cash-coin"></i> {{ oge.fiyat }} TL
@@ -818,14 +851,40 @@
                                         </div>
                                         {% if arazi.fabrika %}
                                         <div class="mt-2">
-                                            <small class="text-muted d-block mb-1">
-                                                Enerji:
-                                                {% for tur, miktar in fabrikalar[arazi.fabrika].enerji_tuketim.items() %}
-                                                {{ enerji_adlari[tur] }} {{ miktar }}/dk{% if not loop.last %}, {% endif %}
-                                                {% endfor %}
-                                                · Kapasite: {{ fabrikalar[arazi.fabrika].kapasite }}
-                                                · Saatlik: {{ fabrikalar[arazi.fabrika].saatlik_uretim }}
-                                            </small>
+                                            <div class="mb-1">
+                                                <small class="text-muted">
+                                                    <i class="bi bi-lightning"></i> Enerji:
+                                                    {% for tur, miktar in fabrikalar[arazi.fabrika].enerji_tuketim.items() %}
+                                                        {{ enerji_adlari[tur] }} {{ miktar }}/dk{% if not loop.last %}, {% endif %}
+                                                    {% endfor %}
+                                                </small>
+                                            </div>
+                                            <div class="mb-1">
+                                                <small class="text-muted">
+                                                    <i class="bi bi-box-seam"></i> Kapasite: {{ fabrikalar[arazi.fabrika].kapasite }}
+                                                </small>
+                                            </div>
+                                            <div class="mb-1">
+                                                <small class="text-danger">
+                                                    <i class="bi bi-arrow-down-circle"></i> Girdi:
+                                                    {% for urun, miktar in fabrikalar[arazi.fabrika].girdi.items() %}
+                                                        {{ miktar }} {{ urun }}{% if not loop.last %}, {% endif %}
+                                                    {% endfor %}
+                                                </small>
+                                            </div>
+                                            <div class="mb-1">
+                                                <small class="text-success">
+                                                    <i class="bi bi-arrow-up-circle"></i> Çıktı:
+                                                    {% for urun, miktar in fabrikalar[arazi.fabrika].cikti.items() %}
+                                                        {{ miktar }} {{ urun }}{% if not loop.last %}, {% endif %}
+                                                    {% endfor %}
+                                                </small>
+                                            </div>
+                                            <div class="mb-1">
+                                                <small class="text-info">
+                                                    <i class="bi bi-clock"></i> Saatlik: {{ fabrikalar[arazi.fabrika].saatlik_uretim }}
+                                                </small>
+                                            </div>
                                             {% set durum = oyuncu.fabrika_uretim_durumu.get(arazi.id|string, {}) %}
                                             {% set bekleyen = durum.get('bekleyen_miktar', 0) %}
                                             {% set baslatildi = durum.get('baslatildi', False) %}
