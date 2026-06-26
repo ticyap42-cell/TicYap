@@ -124,9 +124,17 @@ def ana_sayfa():
     # Kategori ürünlerini ve ikonlarını oluştur
     kategori_urunleri = {}
     kategori_ikonlari = {}
-    for kat_id, kat_data in kat.KATEGORILER.items():
-        kategori_urunleri[kat_id] = {anahtar: bilgi for anahtar, bilgi in kat.URUN_TANIMLARI.items() if bilgi.kategori == kat_id}
-        kategori_ikonlari[kat_id] = kat_data.get("ikon", "bi-box")
+    try:
+        for kat_id, kat_data in kat.KATEGORILER.items():
+            kategori_urunleri[kat_id] = {}
+            kategori_ikonlari[kat_id] = kat_data.get("ikon", "bi-box")
+            for anahtar, bilgi in kat.URUN_TANIMLARI.items():
+                if hasattr(bilgi, 'kategori') and bilgi.kategori == kat_id:
+                    kategori_urunleri[kat_id][anahtar] = bilgi
+    except Exception as e:
+        print(f"Kategori ürünleri oluşturma hatası: {e}")
+        kategori_urunleri = {}
+        kategori_ikonlari = {}
 
     return render_template(
         "index.html",
