@@ -8,144 +8,202 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
         :root {
-            --ticyap-yesil: #2d6a4f;
-            --ticyap-acik-yesil: #52b788;
-            --ticyap-altin: #f4a261;
-            --ticyap-koyu: #1b4332;
+            --primary: #0f766e;
+            --primary-dark: #0d5e56;
+            --primary-light: #14b8a6;
+            --accent: #f59e0b;
+            --accent-dark: #d97706;
+            --surface: #ffffff;
+            --surface-variant: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
-            background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
             min-height: 100vh;
-            font-family: "Segoe UI", system-ui, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         .game-container {
-            max-width: 900px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 1.5rem 1rem 3rem;
+            padding: 2rem 1rem 4rem;
         }
 
         .brand-title {
-            font-weight: 800;
-            letter-spacing: 2px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
             color: #fff;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            font-size: 2.5rem;
         }
 
         .brand-subtitle {
-            color: rgba(255, 255, 255, 0.85);
-            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1rem;
+            font-weight: 400;
         }
 
         .game-card {
-            background: rgba(255, 255, 255, 0.97);
-            border: none;
+            background: var(--surface);
+            border: 1px solid var(--border);
             border-radius: 1rem;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+            box-shadow: var(--shadow-lg);
             overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .game-card:hover {
+            box-shadow: var(--shadow-xl);
+            transform: translateY(-2px);
         }
 
         .card-header-custom {
-            background: var(--ticyap-koyu);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: #fff;
-            font-weight: 600;
-            padding: 0.85rem 1.25rem;
+            font-weight: 700;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
         }
 
         .stat-box {
-            background: #f8f9fa;
+            background: var(--surface-variant);
             border-radius: 0.75rem;
-            padding: 1rem;
+            padding: 1.25rem;
             text-align: center;
-            border: 1px solid #e9ecef;
+            border: 1px solid var(--border);
             height: 100%;
+            transition: all 0.2s ease;
+        }
+
+        .stat-box:hover {
+            border-color: var(--primary-light);
+            transform: translateY(-2px);
         }
 
         .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--ticyap-koyu);
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1.2;
         }
 
         .stat-label {
-            font-size: 0.8rem;
-            color: #6c757d;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.75px;
+            font-weight: 600;
         }
 
         .btn-ticyap {
-            background: var(--ticyap-yesil);
-            border-color: var(--ticyap-yesil);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border: none;
             color: #fff;
-            font-weight: 600;
-            border-radius: 0.6rem;
-            padding: 0.6rem 1.25rem;
+            font-weight: 700;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-md);
         }
 
         .btn-ticyap:hover {
-            background: var(--ticyap-koyu);
-            border-color: var(--ticyap-koyu);
-            color: #fff;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-ticyap:active {
+            transform: translateY(0);
         }
 
         .btn-gold {
-            background: var(--ticyap-altin);
-            border-color: var(--ticyap-altin);
-            color: #1b1b1b;
-            font-weight: 600;
-            border-radius: 0.6rem;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+            border: none;
+            color: #fff;
+            font-weight: 700;
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-md);
         }
 
         .btn-gold:hover {
-            background: #e76f51;
-            border-color: #e76f51;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .nav-pills .nav-link {
+            background: var(--surface-variant);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            margin: 0.25rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .nav-pills .nav-link:hover {
+            background: var(--primary-light);
             color: #fff;
+            border-color: var(--primary-light);
+        }
+
+        .nav-pills .nav-link.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
         }
 
         .shop-item {
-            border: 2px solid #e9ecef;
+            border: 2px solid var(--border);
             border-radius: 0.85rem;
             padding: 1.25rem;
             transition: border-color 0.2s, transform 0.2s;
         }
 
         .shop-item:hover {
-            border-color: var(--ticyap-acik-yesil);
+            border-color: var(--primary-light);
             transform: translateY(-2px);
         }
 
         .wheat-icon {
             font-size: 2rem;
-            color: var(--ticyap-altin);
-        }
-
-        .nav-pills .nav-link {
-            color: var(--ticyap-koyu);
-            font-weight: 600;
-            border-radius: 0.6rem;
-        }
-
-        .nav-pills .nav-link.active {
-            background: var(--ticyap-yesil);
+            color: var(--accent);
         }
 
         .live-dot {
             width: 8px;
             height: 8px;
-            background: #52b788;
+            background: var(--success);
             border-radius: 50%;
             display: inline-block;
             animation: pulse 2s infinite;
         }
 
         .market-item {
-            border: 1px solid #e9ecef;
+            border: 1px solid var(--border);
             border-radius: 0.75rem;
             padding: 1rem;
             margin-bottom: 0.75rem;
-            background: #fafafa;
+            background: var(--surface-variant);
         }
 
         .market-item:last-child {
@@ -162,7 +220,7 @@
 
         .ekonomi-kutu {
             background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
-            border: 1px solid #c8e6c9;
+            border: 1px solid var(--success);
             border-radius: 0.75rem;
             padding: 1rem 1.15rem;
         }
@@ -483,6 +541,12 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="depo-tab" data-bs-toggle="pill"
+                        data-bs-target="#depo" type="button" role="tab">
+                    <i class="bi bi-box-seam"></i> Depo
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="klup-tab" data-bs-toggle="pill"
                         data-bs-target="#klup" type="button" role="tab">
                     <i class="bi bi-people"></i> Klüpler
@@ -566,30 +630,6 @@
                                 </div>
                             </div>
                             {% endfor %}
-                        </div>
-
-                        <div class="depo-kutu mb-3">
-                            <h6 class="fw-bold mb-2">
-                                <i class="bi bi-box-seam text-warning"></i> Depo Sistemi
-                            </h6>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div>
-                                    <small class="text-muted">Seviye: <strong>{{ oyuncu.get('depo_seviyesi', 1) }}</strong></small>
-                                    <br>
-                                    <small class="text-muted">Kapasite: <strong>{{ oyuncu.get('depo_kapasitesi', 1000) }}</strong></small>
-                                </div>
-                                <div>
-                                    <small class="text-muted">Kullanılan: <strong>{{ oyuncu.urunler.values() | sum }}</strong></small>
-                                    <br>
-                                    <small class="text-muted">Boş: <strong>{{ oyuncu.get('depo_kapasitesi', 1000) - (oyuncu.urunler.values() | sum) }}</strong></small>
-                                </div>
-                            </div>
-                            <form action="{{ url_for('depo_seviyesi_yukselt') }}" method="POST" class="ajax-form">
-                                <button type="submit" class="btn btn-outline-warning btn-sm w-100">
-                                    <i class="bi bi-arrow-up-circle"></i> Depo Seviyesini Yükselt
-                                    ({{ (oyuncu.get('depo_seviyesi', 1) + 1) * 5000 }} TL)
-                                </button>
-                            </form>
                         </div>
 
                         <div class="ekonomi-kutu mb-3">
@@ -1142,6 +1182,115 @@
                 </div>
             </div>
 
+            <div class="tab-pane fade" id="depo" role="tabpanel">
+                <div class="game-card card mb-3">
+                    <div class="card-header-custom">
+                        <i class="bi bi-box-seam me-1"></i> Depo Yönetimi
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <div class="stat-box">
+                                    <div class="stat-value">{{ oyuncu.get('depo_seviyesi', 1) }}</div>
+                                    <div class="stat-label">Depo Seviyesi</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-box">
+                                    <div class="stat-value">{{ oyuncu.get('depo_kapasitesi', 1000) }}</div>
+                                    <div class="stat-label">Toplam Kapasite</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-box">
+                                    <div class="stat-value">{{ oyuncu.urunler.values() | sum }}</div>
+                                    <div class="stat-label">Kullanılan</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-box">
+                                    <div class="stat-value">{{ oyuncu.get('depo_kapasitesi', 1000) - (oyuncu.urunler.values() | sum) }}</div>
+                                    <div class="stat-label">Boş Alan</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="progress mb-3" style="height: 25px;">
+                            {% set kullanilan_oran = ((oyuncu.urunler.values() | sum) / oyuncu.get('depo_kapasitesi', 1000)) * 100 %}
+                            <div class="progress-bar {% if kullanilan_oran > 90 %}bg-danger{% elif kullanilan_oran > 70 %}bg-warning{% else %}bg-success{% endif %}"
+                                 role="progressbar"
+                                 style="width: {{ kullanilan_oran }}%"
+                                 aria-valuenow="{{ kullanilan_oran }}"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100">
+                                {{ "%.1f"|format(kullanilan_oran) }}%
+                            </div>
+                        </div>
+
+                        <form action="{{ url_for('depo_seviyesi_yukselt') }}" method="POST" class="ajax-form">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Seviye {{ oyuncu.get('depo_seviyesi', 1) + 1 }}</strong>
+                                    <br>
+                                    <small class="text-muted">Yeni Kapasite: {{ (oyuncu.get('depo_seviyesi', 1) + 1) * 1000 }}</small>
+                                </div>
+                                <div>
+                                    <strong>{{ (oyuncu.get('depo_seviyesi', 1) + 1) * 5000 }} TL</strong>
+                                    <br>
+                                    <small class="text-muted">Yükseltme Ücreti</small>
+                                </div>
+                                <button type="submit" class="btn btn-ticyap">
+                                    <i class="bi bi-arrow-up-circle"></i> Yükselt
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="game-card card">
+                    <div class="card-header-custom">
+                        <i class="bi bi-inboxes me-1"></i> Depo İçeriği
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="accordion" id="depoAccordion">
+                            {% for kat_adi, urunler in kategori_urunleri.items() %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button {% if not loop.first %}collapsed{% endif %}"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#depo-{{ kat_adi }}"
+                                            aria-expanded="{% if loop.first %}true{% else %}false{% endif %}"
+                                            aria-controls="depo-{{ kat_adi }}">
+                                        <i class="bi {{ kategori_ikonlari.get(kat_adi, 'bi-box') }} me-2"></i>
+                                        {{ kat_adi }}
+                                    </button>
+                                </h2>
+                                <div id="depo-{{ kat_adi }}"
+                                     class="accordion-collapse collapse {% if loop.first %}show{% endif %}"
+                                     data-bs-parent="#depoAccordion">
+                                    <div class="accordion-body p-2">
+                                        <div class="row g-1">
+                                            {% for anahtar, bilgi in urun_tanimlari.items() if bilgi.kategori == kat_adi %}
+                                            <div class="col-6 col-md-4">
+                                                <div class="stat-box py-1 px-2">
+                                                    <div class="stat-value fs-6" id="stat-urun-{{ anahtar }}">
+                                                        {{ oyuncu.urunler.get(anahtar, 0) }}
+                                                    </div>
+                                                    <div class="stat-label small">{{ bilgi.ad }}</div>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="tab-pane fade" id="chat" role="tabpanel">
                 <div class="game-card card">
                     <div class="card-header-custom">
@@ -1652,9 +1801,9 @@
         durumuGuncelle();
         klupleriYukle();
         chatMesajlariniYukle();
-        setInterval(durumuGuncelle, 120000);  // 2 dakikada bir
-        setInterval(klupleriYukle, 60000);    // 1 dakikada bir
-        setInterval(chatMesajlariniYukle, 15000);  // 15 saniyede bir
+        setInterval(durumuGuncelle, 180000);  // 3 dakikada bir
+        setInterval(klupleriYukle, 120000);    // 2 dakikada bir
+        setInterval(chatMesajlariniYukle, 20000);  // 20 saniyede bir
     </script>
     {% endif %}
 </body>
