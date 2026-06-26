@@ -121,6 +121,13 @@ def ana_sayfa():
     mesaj = request.args.get("mesaj")
     hata = request.args.get("hata")
     ekonomi = db.ekonomik_durum_hesapla(oyuncu) if oyuncu else None
+    # Kategori ürünlerini ve ikonlarını oluştur
+    kategori_urunleri = {}
+    kategori_ikonlari = {}
+    for kat_id, kat_data in kat.KATEGORILER.items():
+        kategori_urunleri[kat_id] = {anahtar: bilgi for anahtar, bilgi in kat.URUN_TANIMLARI.items() if bilgi.kategori == kat_id}
+        kategori_ikonlari[kat_id] = kat_data.get("ikon", "bi-box")
+
     return render_template(
         "index.html",
         oyuncu=oyuncu,
@@ -138,6 +145,8 @@ def ana_sayfa():
         ekonomi=ekonomi,
         zincir_rehberi=kat.ZINCIR_REHBERI,
         urun_tanimlari=kat.URUN_TANIMLARI,
+        kategori_urunleri=kategori_urunleri,
+        kategori_ikonlari=kategori_ikonlari,
     )
 
 
